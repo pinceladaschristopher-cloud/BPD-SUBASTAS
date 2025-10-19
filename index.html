@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Subastas - Pincel Dorado</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            /* Colores actualizados para una interfaz clara con texto negro */
+            --background-color: #ffffff;
+            --card-bg: #ffffff;
+            --text-primary: #000000; /* Texto principal en negro */
+            --text-secondary: #000000; /* Texto secundario en negro */
+            --border-color: #e5e7eb;
+            --accent-gold: #FFD700; /* El color dorado se mantiene */
+            --accent-gold-text: #423000; /* El texto sobre dorado se mantiene */
+            --btn-primary-bg: #f3f4f6;
+            --btn-primary-hover: #e5e7eb;
+            --btn-primary-text: #000000; /* Texto de botones en negro */
+        }
+        /* La regla de modo oscuro ha sido eliminada */
+        body { font-family: 'Inter', sans-serif; background-color: var(--background-color); color: var(--text-primary); transition: background-color 0.3s, color 0.3s; }
+        .view { display: none; }
+        .view-active { display: flex; }
+        #student-dashboard.view-active, #teacher-dashboard.view-active { display: block; }
+        .card { background-color: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05); border: 1px solid var(--border-color); transition: background-color 0.3s, border-color 0.3s; overflow: hidden; }
+        .btn { padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; transition: all 0.2s ease; cursor: pointer; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-primary { background-color: var(--btn-primary-bg); color: var(--btn-primary-text); text-transform: uppercase; border: 1px solid var(--border-color); }
+        .btn-primary:hover:not(:disabled) { background-color: var(--btn-primary-hover); transform: translateY(-1px); }
+        .btn-accent { background-color: var(--accent-gold); color: var(--accent-gold-text); }
+        .btn-accent:hover:not(:disabled) { background-color: #e6c200; }
+        .input-field { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--card-bg); color: var(--text-primary); transition: background-color 0.3s, border-color 0.3s, color 0.3s; }
+        .input-field::placeholder { color: #888888; } /* Placeholder ajustado para visibilidad */
+        .input-field:focus { outline: none; border-color: var(--accent-gold); box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2); }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content { transform: scale(0.95) translateY(10px); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .modal-overlay.active .modal-content { transform: scale(1) translateY(0); }
+        .winner-announcement { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        #toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.75rem; }
+        .toast { background-color: var(--card-bg); color: var(--text-primary); padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.75rem; transform: translateX(120%); opacity: 0; transition: transform 0.4s ease, opacity 0.4s ease; }
+        .toast.show { transform: translateX(0); opacity: 1; }
+        .toast.success { border-left: 4px solid #22c55e; }
+        .toast.error { border-left: 4px solid #ef4444; }
+        .toast.info { border-left: 4px solid #3b82f6; }
+        @keyframes pulse-bg { 0% { background-color: rgba(255, 215, 0, 0.2); } 100% { background-color: transparent; } }
+        .highlight-update { animation: pulse-bg 1.5s ease-out; }
+        .countdown-timer { font-variant-numeric: tabular-nums; }
+    </style>
+</head>
+<body>
+
+    <div id="toast-container"></div>
+
+    <div id="role-selection-view" class="view view-active flex-col items-center justify-center min-h-screen p-4">
+        <div class="max-w-lg text-center w-full">
+            <h1 class="text-3xl font-bold text-[var(--accent-gold)] mb-2">Subastas "Pincel Dorado"</h1>
+            <p class="text-[var(--text-secondary)] mb-8">Selecciona tu rol para continuar.</p>
+            <div id="role-buttons" class="space-y-4">
+                <button id="select-student-btn" class="w-full btn btn-primary" disabled><i class="fas fa-spinner fa-spin"></i>Conectando...</button>
+                <button id="select-teacher-btn" class="w-full btn btn-primary" disabled><i class="fas fa-spinner fa-spin"></i>Conectando...</button>
+            </div>
+            <div id="init-error-display" class="hidden mt-4 bg-red-100 text-red-700 p-4 rounded-lg text-left"></div>
+        </div>
+        <footer class="absolute bottom-4 text-xs text-[var(--text-secondary)]">
+            © 2025 Subastas Pincel Dorado | Desarrollado por Didac-Click Group.
+        </footer>
+    </div>
+    
+    <div id="login-view" class="view flex-col items-center justify-center min-h-screen p-4">
+        <div class="w-full max-w-sm">
+            <button class="back-to-role-selection text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-4 text-sm">&larr; Volver a selección de rol</button>
+            <h2 id="login-title" class="text-2xl font-bold text-center mb-6"></h2>
+            <div id="login-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden" role="alert"></div>
+            <div id="student-fields" class="space-y-4">
+                <select id="student-course-select" class="input-field"></select>
+                <select id="student-name-select" class="input-field" disabled></select>
+            </div>
+            <div id="teacher-fields">
+                <input type="password" id="teacher-password" placeholder="Clave de acceso" class="input-field">
+            </div>
+            <button id="login-btn" class="w-full btn btn-primary mt-6">
+                <span id="login-btn-text"></span><i id="login-spinner" class="fas fa-spinner fa-spin hidden"></i>
+            </button>
+        </div>
+    </div>
+
+    <div id="main-container" class="p-4 md:p-6 hidden">
+        <header id="app-header" class="p-4 mb-6 flex justify-between items-center hidden border-b border-[var(--border-color)]">
+            <div id="header-title" class="text-xl font-bold flex items-center gap-2"></div>
+            <div class="flex items-center gap-4">
+                <div id="user-info" class="text-right hidden sm:block">
+                    <p class="font-semibold" id="user-name"></p>
+                    <p class="text-sm text-[var(--text-secondary)]" id="user-detail"></p>
+                </div>
+                <button id="logout-btn" title="Volver al Inicio" class="btn bg-gray-500 text-white !p-2.5 rounded-md hover:bg-gray-600">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </header>
+        <div id="student-dashboard" class="view"></div>
+        <div id="teacher-dashboard" class="view"></div>
+    </div>
+
+    <div id="create-room-modal" class="modal-overlay">
+        <div class="modal-content card p-8 w-full max-w-lg">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Crear Nueva Sala</h2>
+                <button id="close-modal-btn" class="text-gray-400 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <form id="create-room-form" class="space-y-4">
+                <input type="text" id="room-name" placeholder="Nombre de la Sala" class="input-field" required>
+                <input type="text" id="room-item" placeholder="Elemento a subastar" class="input-field" required>
+                <input type="number" id="room-min-bid" placeholder="Puja Inicial" class="input-field" min="1" required>
+                <input type="number" id="room-duration" placeholder="Duración en minutos" class="input-field" min="1" required>
+                <div class="flex items-center justify-between bg-gray-100 p-3 rounded-lg">
+                    <label for="room-anti-snipe" class="font-medium text-sm">Activar Anti-Francotirador (Soft Close)</label>
+                    <input type="checkbox" id="room-anti-snipe" class="h-5 w-5 rounded text-yellow-500 focus:ring-yellow-400">
+                </div>
+                <p class="text-xs text-[var(--text-secondary)] -mt-2 px-1">Si una puja se realiza en los últimos 30 segundos, el tiempo se reinicia a 30 segundos.</p>
+                <div id="modal-error" class="text-red-500 text-sm hidden"></div>
+                <button id="submit-room-btn" type="submit" class="w-full btn btn-primary">
+                    <span id="submit-room-btn-text">Crear Sala</span><i id="submit-room-spinner" class="fas fa-spinner fa-spin hidden"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="fullscreen-room-overlay" class="modal-overlay">
+        <div id="fullscreen-room-content" class="w-full h-full p-4 sm:p-8 flex flex-col justify-center items-center text-center relative rounded-lg bg-[var(--background-color)]">
+            <!-- Contenido se inyectará dinámicamente -->
+        </div>
+    </div>
+
+    <!-- El botón de cambio de tema ha sido eliminado -->
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, arrayUnion, deleteDoc, arrayRemove, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const API_URL = 'https://script.google.com/macros/s/AKfycbzUd8sFN2xAu0AyHgrPCwNVm7PZhnJi0zKAtGoxjOp9n-FsDfcvVWhg-kLhZXqXIIYRxQ/exec';
+            const TEACHER_PASSWORD = 'PinceladasM25-26';
+            const ANTI_SNIPE_WINDOW = 30 * 1000;
+            const BID_COOLDOWN = 3000; // 3 segundos de enfriamiento
+            
+            let db, auth;
+            const state = {
+                currentUser: null, rooms: [], studentDataCache: null, isFirebaseReady: false, 
+                activeTimers: {}, inputValues: {}, cooldownEndTimes: {},
+            };
+
+            const DOMElements = {
+                views: {
+                    roleSelection: document.getElementById('role-selection-view'),
+                    login: document.getElementById('login-view'),
+                    studentDashboard: document.getElementById('student-dashboard'),
+                    teacherDashboard: document.getElementById('teacher-dashboard'),
+                },
+                mainContainer: document.getElementById('main-container'),
+                header: {
+                    container: document.getElementById('app-header'), title: document.getElementById('header-title'),
+                    userName: document.getElementById('user-name'), userDetail: document.getElementById('user-detail'),
+                },
+                loginForm: {
+                    title: document.getElementById('login-title'), studentFields: document.getElementById('student-fields'),
+                    teacherFields: document.getElementById('teacher-fields'), studentCourseSelect: document.getElementById('student-course-select'),
+                    studentNameSelect: document.getElementById('student-name-select'), teacherPassword: document.getElementById('teacher-password'),
+                    loginBtn: document.getElementById('login-btn'), error: document.getElementById('login-error'),
+                },
+                createRoomModal: {
+                    overlay: document.getElementById('create-room-modal'), form: document.getElementById('create-room-form'),
+                    name: document.getElementById('room-name'), item: document.getElementById('room-item'),
+                    minBid: document.getElementById('room-min-bid'), duration: document.getElementById('room-duration'),
+                    antiSnipe: document.getElementById('room-anti-snipe'), submitBtn: document.getElementById('submit-room-btn'),
+                    closeBtn: document.getElementById('close-modal-btn'), error: document.getElementById('modal-error'),
+                },
+                fullscreen: {
+                    overlay: document.getElementById('fullscreen-room-overlay'), content: document.getElementById('fullscreen-room-content'),
+                },
+                toastContainer: document.getElementById('toast-container'),
+            };
+
+            async function initializeFirebase() {
+                try {
+                    const firebaseConfig = {
+                        apiKey: "AIzaSyAhcihLdxeeobIEH3RXsnMYoXu0uHWRsEg", authDomain: "subasta-de-pinceles.firebaseapp.com",
+                        projectId: "subasta-de-pinceles", storageBucket: "subasta-de-pinceles.firebasestorage.app",
+                        messagingSenderId: "92038766533", appId: "1:92038766533:web:8f53fcef4d224fb8fc35ac"
+                    };
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    await signInAnonymously(auth);
+                    setupAuctionRoomsListener();
+                    state.isFirebaseReady = true;
+                    document.querySelectorAll('#role-buttons button').forEach(btn => {
+                        btn.disabled = false;
+                        btn.innerHTML = btn.id.includes('student') ? 'Soy Estudiante' : 'Soy Maestro';
+                    });
+                } catch (error) {
+                    console.error("Firebase initialization failed:", error);
+                    const errorDisplay = document.getElementById('init-error-display');
+                    if (error.code === 'auth/admin-restricted-operation') {
+                        errorDisplay.innerHTML = `<h3 class="font-bold">¡Acción Requerida!</h3><p>Habilita el inicio de sesión anónimo en tu Consola de Firebase y recarga la página.</p>`;
+                    } else {
+                        errorDisplay.textContent = `Error de Conexión: ${error.message}`;
+                    }
+                    errorDisplay.classList.remove('hidden');
+                }
+            }
+
+            function switchView(viewId) {
+                Object.values(DOMElements.views).forEach(v => v.classList.remove('view-active'));
+                DOMElements.mainContainer.classList.add('hidden');
+                DOMElements.header.container.classList.add('hidden');
+                if (viewId === 'studentDashboard' || viewId === 'teacherDashboard') {
+                    DOMElements.mainContainer.classList.remove('hidden');
+                    DOMElements.header.container.classList.remove('hidden');
+                    DOMElements.views[viewId].classList.add('view-active');
+                    updateHeader();
+                } else {
+                    DOMElements.views[viewId.replace('View', '')].classList.add('view-active');
+                }
+            }
+            
+            function showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                const icons = { info: 'fa-info-circle', success: 'fa-check-circle', error: 'fa-exclamation-triangle' };
+                toast.innerHTML = `<i class="fas ${icons[type]}"></i><p>${message}</p>`;
+                DOMElements.toastContainer.appendChild(toast);
+                setTimeout(() => toast.classList.add('show'), 50);
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    toast.addEventListener('transitionend', () => toast.remove());
+                }, 4000);
+            }
+
+            // La función applyTheme ha sido eliminada
+            
+            function toggleSpinner(element, show) {
+                const text = element.querySelector('span');
+                const spinner = element.querySelector('i');
+                if (text) text.classList.toggle('hidden', show);
+                if (spinner) spinner.classList.toggle('hidden', !show);
+                element.disabled = show;
+            }
+
+            function updateHeader() {
+                if (!state.currentUser) return;
+                DOMElements.header.title.innerHTML = state.currentUser.type === 'student' ? 'Panel de Estudiante' : 'Panel de Maestro';
+                DOMElements.header.userName.textContent = state.currentUser.data.nombre || 'Administrador';
+                DOMElements.header.userDetail.textContent = state.currentUser.data.course ? `Curso: ${state.currentUser.data.course}` : 'Modo de gestión';
+            }
+
+            function toggleModal(modalName, show) {
+                const modal = DOMElements[modalName];
+                modal.overlay.classList.toggle('active', show);
+                if (!show && modalName === 'createRoomModal') modal.form.reset();
+            }
+
+            function setupAuctionRoomsListener() {
+                const roomsCollection = collection(db, "auctionRooms");
+                onSnapshot(roomsCollection, (snapshot) => {
+                    const newRooms = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    const processedRooms = newRooms.sort((a, b) => {
+                        if (a.status === 'ended' && b.status !== 'ended') return 1;
+                        if (a.status !== 'ended' && b.status === 'ended') return -1;
+                        return (b.createdAt || 0) - (a.createdAt || 0);
+                    });
+
+                    if (JSON.stringify(state.rooms) !== JSON.stringify(processedRooms)) {
+                        const oldRooms = state.rooms;
+                        state.rooms = processedRooms;
+                        renderDashboard();
+                        
+                        const fsRoomId = DOMElements.fullscreen.overlay.dataset.roomId;
+                        if (fsRoomId) {
+                            const oldRoomData = oldRooms.find(r => r.id === fsRoomId);
+                            const newRoomData = state.rooms.find(r => r.id === fsRoomId);
+                            if (JSON.stringify(oldRoomData) !== JSON.stringify(newRoomData)) {
+                                renderFullscreenView(fsRoomId);
+                            }
+                        }
+                    }
+                }, (error) => {
+                    console.error("Error listening to rooms:", error);
+                    showToast("Error de conexión con la base de datos.", "error");
+                });
+            }
+
+            async function loadStudentSelectionData() {
+                if (state.studentDataCache) return populateStudentSelects(state.studentDataCache);
+                try {
+                    DOMElements.loginForm.studentCourseSelect.innerHTML = '<option>Cargando...</option>';
+                    const response = await fetch(`${API_URL}?v=${Date.now()}`);
+                    if (!response.ok) throw new Error(`Error de red: ${response.status}`);
+                    const data = await response.json();
+                    state.studentDataCache = data;
+                    populateStudentSelects(data);
+                } catch (error) {
+                    showToast("No se pudieron cargar los datos de los estudiantes.", "error");
+                }
+            }
+            
+            function populateStudentSelects(data) {
+                const { studentCourseSelect, studentNameSelect } = DOMElements.loginForm;
+                studentCourseSelect.innerHTML = '<option value="">Selecciona tu curso</option>';
+                Object.keys(data).forEach(courseName => {
+                    studentCourseSelect.innerHTML += `<option value="${courseName}">${courseName}</option>`;
+                });
+                studentCourseSelect.onchange = () => {
+                    const selectedCourse = studentCourseSelect.value;
+                    studentNameSelect.innerHTML = '<option value="">Selecciona tu nombre</option>';
+                    if (selectedCourse && data[selectedCourse]?.usuarios) {
+                        data[selectedCourse].usuarios.forEach(student => {
+                            studentNameSelect.innerHTML += `<option value='${JSON.stringify({ ...student, course: selectedCourse })}'>${student.nombre}</option>`;
+                        });
+                        studentNameSelect.disabled = false;
+                    } else {
+                        studentNameSelect.disabled = true;
+                    }
+                };
+            }
+
+            function handleLogin() {
+                const { studentFields, loginBtn, error, studentNameSelect, teacherPassword } = DOMElements.loginForm;
+                const isStudent = studentFields.style.display === 'block';
+                error.classList.add('hidden');
+                toggleSpinner(loginBtn, true);
+                if (isStudent) {
+                    if (!studentNameSelect.value) {
+                        error.textContent = 'Por favor, selecciona tu curso y nombre.';
+                        error.classList.remove('hidden');
+                    } else {
+                        state.currentUser = { type: 'student', data: JSON.parse(studentNameSelect.value), joinedRoomId: null };
+                        renderDashboard();
+                        switchView('studentDashboard');
+                    }
+                } else {
+                    if (teacherPassword.value === TEACHER_PASSWORD) {
+                        state.currentUser = { type: 'teacher', data: { nombre: 'Admin' } };
+                        renderDashboard();
+                        switchView('teacherDashboard');
+                    } else {
+                        error.textContent = 'Clave incorrecta.';
+                        error.classList.remove('hidden');
+                    }
+                }
+                toggleSpinner(loginBtn, false);
+            }
+
+            function handleLogout() {
+                state.currentUser = null;
+                DOMElements.loginForm.teacherPassword.value = '';
+                switchView('roleSelectionView');
+            }
+            
+            async function handleRefreshPinceles() {
+                const refreshBtn = document.getElementById('refresh-pinceles-btn');
+                if (!refreshBtn || refreshBtn.disabled) return;
+
+                const icon = refreshBtn.querySelector('i');
+                icon.classList.add('fa-spin');
+                refreshBtn.disabled = true;
+
+                try {
+                    const response = await fetch(`${API_URL}?v=${Date.now()}`);
+                    if (!response.ok) throw new Error(`Error de red: ${response.status}`);
+                    const data = await response.json();
+                    
+                    state.studentDataCache = data; 
+                    
+                    const studentName = state.currentUser.data.nombre;
+                    const studentCourse = state.currentUser.data.course;
+
+                    if (data[studentCourse] && data[studentCourse].usuarios) {
+                        const updatedStudentData = data[studentCourse].usuarios.find(s => s.nombre === studentName);
+                        if (updatedStudentData && typeof updatedStudentData.pinceles !== 'undefined') {
+                            const oldPinceles = state.currentUser.data.pinceles;
+                            const newPinceles = updatedStudentData.pinceles;
+                            
+                            state.currentUser.data.pinceles = newPinceles;
+                            
+                            const pincelesDisplay = document.getElementById('pinceles-count');
+                            if (pincelesDisplay) {
+                                pincelesDisplay.textContent = newPinceles;
+                                pincelesDisplay.classList.add('highlight-update');
+                                setTimeout(() => pincelesDisplay.classList.remove('highlight-update'), 1500);
+                            }
+                            
+                            if (newPinceles !== oldPinceles) {
+                                showToast("¡Pinceles actualizados!", "success");
+                            } else {
+                                showToast("Ya tienes la cantidad más reciente de pinceles.", "info");
+                            }
+                        } else {
+                            throw new Error("No se encontraron los datos actualizados del estudiante.");
+                        }
+                    } else {
+                        throw new Error("No se encontraron los datos del curso.");
+                    }
+
+                } catch (error) {
+                    console.error("Error refreshing pinceles:", error);
+                    showToast("No se pudo actualizar la cantidad de pinceles.", "error");
+                } finally {
+                    icon.classList.remove('fa-spin');
+                    refreshBtn.disabled = false;
+                }
+            }
+
+
+            async function handleCreateRoom(e) {
+                e.preventDefault();
+                const { name, item, minBid, duration, antiSnipe, submitBtn } = DOMElements.createRoomModal;
+                toggleSpinner(submitBtn, true);
+                const durationMs = parseInt(duration.value, 10) * 60 * 1000;
+                try {
+                    await addDoc(collection(db, "auctionRooms"), {
+                        name: name.value.trim(), item: item.value.trim(), minBid: parseInt(minBid.value, 10),
+                        enableAntiSnipe: antiSnipe.checked, highestBid: parseInt(minBid.value, 10), highestBidder: 'Nadie',
+                        endTime: Date.now() + durationMs, originalDuration: durationMs,
+                        status: 'active', createdAt: Date.now(), bids: [], participants: [],
+                    });
+                    toggleModal('createRoomModal', false);
+                    showToast("Sala creada exitosamente.", "success");
+                } catch (err) {
+                    showToast("No se pudo crear la sala.", "error");
+                } finally {
+                    toggleSpinner(submitBtn, false);
+                }
+            }
+
+            async function updateRoomStatus(roomId, newStatus) {
+                const room = state.rooms.find(r => r.id === roomId);
+                if (!room) return;
+                const roomRef = doc(db, "auctionRooms", roomId);
+                let updates = { status: newStatus };
+                if (newStatus === 'ended') updates.endedAt = Date.now();
+                if (newStatus === 'paused') updates.remainingTimeOnPause = Math.max(0, room.endTime - Date.now());
+                if (newStatus === 'active') updates.endTime = Date.now() + (room.remainingTimeOnPause || 0);
+                if (newStatus === 'restarted') {
+                    updates = { ...updates, status: 'active', endTime: Date.now() + room.originalDuration,
+                        highestBid: room.minBid, highestBidder: 'Nadie', bids: [] };
+                }
+                await updateDoc(roomRef, updates).catch(e => showToast("Error al actualizar la sala.", "error"));
+            }
+            
+            async function handleDeleteRoom(roomId) {
+                try {
+                    await deleteDoc(doc(db, "auctionRooms", roomId));
+                    showToast("Sala eliminada.", "success");
+                } catch (e) {
+                    showToast("Error al eliminar la sala.", "error");
+                    console.error("Error deleting room:", e);
+                }
+            }
+
+            async function handleJoinLeaveRoom(roomId, action) {
+                state.currentUser.joinedRoomId = (action === 'join') ? roomId : null;
+                const roomRef = doc(db, "auctionRooms", roomId);
+                try {
+                    await updateDoc(roomRef, {
+                        participants: (action === 'join') ? arrayUnion(state.currentUser.data.nombre) : arrayRemove(state.currentUser.data.nombre)
+                    });
+                    renderDashboard();
+                } catch (e) {
+                    state.currentUser.joinedRoomId = null; 
+                }
+            }
+
+            async function handleBid(roomId, bidAmount, bidButton) {
+                if (state.cooldownEndTimes[roomId] && Date.now() < state.cooldownEndTimes[roomId]) {
+                    return;
+                }
+                if (bidButton.disabled) return;
+
+                if (bidAmount > state.currentUser.data.pinceles) {
+                    return showToast("No tienes suficientes pinceles para esta puja.", "error");
+                }
+
+                toggleSpinner(bidButton, true);
+
+                const roomRef = doc(db, "auctionRooms", roomId);
+                try {
+                    await runTransaction(db, async (transaction) => {
+                        const roomDoc = await transaction.get(roomRef);
+                        if (!roomDoc.exists()) throw "¡La sala ya no existe!";
+                        const room = roomDoc.data();
+                        if (room.status !== 'active') throw "¡La subasta no está activa!";
+                        if (bidAmount <= room.highestBid) throw `¡Puja debe ser mayor a ${room.highestBid}!`;
+                        
+                        const newBid = { bidder: state.currentUser.data.nombre, amount: bidAmount, time: Date.now() };
+                        let newEndTime = room.endTime;
+                        if (room.enableAntiSnipe && (room.endTime - Date.now() < ANTI_SNIPE_WINDOW)) {
+                            newEndTime = Date.now() + ANTI_SNIPE_WINDOW;
+                        }
+                        transaction.update(roomRef, { highestBid: bidAmount, highestBidder: newBid.bidder, bids: arrayUnion(newBid), endTime: newEndTime });
+                    });
+
+                    showToast(`¡Puja de ${bidAmount} aceptada!`, "success");
+                    state.cooldownEndTimes[roomId] = Date.now() + BID_COOLDOWN;
+                } catch (error) {
+                    showToast(typeof error === 'string' ? error : "Error al realizar la puja.", "error");
+                    toggleSpinner(bidButton, false);
+                }
+            }
+            
+            function applyVisualCooldowns() {
+                document.querySelectorAll('[data-cooldown-interval]').forEach(el => {
+                    clearInterval(parseInt(el.dataset.cooldownInterval, 10));
+                    delete el.dataset.cooldownInterval;
+                });
+
+                for (const roomId in state.cooldownEndTimes) {
+                    const endTime = state.cooldownEndTimes[roomId];
+                    const buttons = document.querySelectorAll(`.bid-btn[data-roomid="${roomId}"], .fullscreen-bid-btn[data-roomid="${roomId}"]`);
+
+                    if (Date.now() < endTime) {
+                        buttons.forEach(button => {
+                            button.disabled = true;
+                            const textSpan = button.querySelector('span');
+                            if (!textSpan) return;
+                            
+                            const originalText = "Pujar";
+
+                            const updateTimer = () => {
+                                const timeLeftMs = endTime - Date.now();
+                                if (timeLeftMs > 0) {
+                                    const secondsLeft = Math.ceil(timeLeftMs / 1000);
+                                    textSpan.textContent = `(${secondsLeft}s)`;
+                                } else {
+                                    textSpan.textContent = originalText;
+                                    button.disabled = false;
+                                    clearInterval(intervalId);
+                                    delete button.dataset.cooldownInterval;
+                                    delete state.cooldownEndTimes[roomId];
+                                }
+                            };
+                            const intervalId = setInterval(updateTimer, 1000);
+                            button.dataset.cooldownInterval = intervalId;
+                            updateTimer();
+                        });
+                    } else {
+                        delete state.cooldownEndTimes[roomId];
+                    }
+                }
+            }
+
+
+            function renderDashboard() {
+                if (!state.currentUser) return;
+                const dashboardId = state.currentUser.type + 'Dashboard';
+                const container = DOMElements.views[dashboardId];
+                if (!container) return;
+
+                const headerHTML = state.currentUser.type === 'student' ?
+                    `<div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold">Salas de Subasta</h2>
+                        <div class="text-right">
+                            <p class="text-xs font-bold text-[var(--text-secondary)] uppercase">Mis Pinceles</p>
+                            <div class="flex items-center gap-2">
+                                <p id="pinceles-count" class="text-3xl font-bold text-[var(--accent-gold)]">${state.currentUser?.data.pinceles || 0}</p>
+                                <button id="refresh-pinceles-btn" title="Actualizar Pinceles" class="btn !p-2 rounded-md bg-gray-200 text-[var(--text-primary)]">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>` :
+                    `<div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold">Gestión de Subastas</h2><button id="create-room-btn" class="btn btn-accent"><i class="fas fa-plus"></i>Crear Sala</button></div>`;
+                
+                Object.values(state.activeTimers).forEach(clearInterval);
+                state.activeTimers = {};
+                
+                let roomsHTML = `<div class="flex flex-col gap-1">`;
+                if (state.rooms.length === 0) {
+                    roomsHTML += `<div class="text-center text-[var(--text-secondary)] p-8 mt-4">No hay salas de subasta.</div>`;
+                } else {
+                    state.rooms.forEach(room => roomsHTML += createRoomHTML(state.currentUser.type, room));
+                }
+                container.innerHTML = headerHTML + roomsHTML + `</div>`;
+                state.rooms.filter(r => r.status !== 'ended').forEach(room => startCountdownTimer(room.id, `countdown-${room.id}`));
+                applyVisualCooldowns();
+            }
+
+            function createRoomHTML(userType, room) {
+                if (room.status === 'ended') {
+                    let teacherControls = '';
+                    if (userType === 'teacher') {
+                        teacherControls = `<button title="Eliminar Sala" class="btn bg-red-600 hover:bg-red-700 text-white !p-2 rounded-md absolute top-2 right-2 delete-room-btn" data-roomid="${room.id}"><i class="fas fa-trash"></i></button>`;
+                    }
+                    return `<div class="relative flex flex-col sm:flex-row justify-center items-center text-center w-full p-6 my-2 bg-green-100 rounded-lg winner-announcement gap-4">
+                                ${teacherControls}
+                                <i class="fas fa-trophy text-3xl text-green-500"></i>
+                                <div><p class="text-lg text-green-800">Subasta para <span class="font-bold">${room.item}</span> finalizada.</p>
+                                <p class="text-2xl font-bold text-green-900">Ganador: ${room.highestBidder}!</p></div></div>`;
+                }
+                let actionHTML;
+                if (userType === 'student') {
+                    const hasJoined = state.currentUser.joinedRoomId === room.id;
+                    const inAnotherRoom = state.currentUser.joinedRoomId && !hasJoined;
+                    if (hasJoined) {
+                        if (room.status === 'paused') {
+                            actionHTML = `<div class="bg-yellow-100 p-4 rounded-lg text-center font-bold text-yellow-600">Pausada</div>`;
+                        } else {
+                            const nextBid = room.highestBid + 1;
+                            const isCoolingDown = state.cooldownEndTimes[room.id] && Date.now() < state.cooldownEndTimes[room.id];
+                            actionHTML = `<div class="bg-[var(--card-bg)] p-4 rounded-lg card">
+                                <div class="flex items-center gap-2">
+                                    <input type="number" placeholder="Mín. ${nextBid}" min="${nextBid}" class="input-field bid-input w-full" data-roomid="${room.id}" value="${state.inputValues[room.id] || ''}">
+                                    <button class="btn btn-primary bid-btn whitespace-nowrap !px-4" data-roomid="${room.id}" ${isCoolingDown ? 'disabled' : ''}>
+                                        <span>Pujar</span><i class="fas fa-spinner fa-spin hidden"></i>
+                                    </button>
+                                </div>
+                                <div class="flex gap-1 mt-2">
+                                    <button class="flex-1 btn !p-1 text-xs btn-primary quick-bid-btn" data-value="1" data-roomid="${room.id}">+1</button>
+                                    <button class="flex-1 btn !p-1 text-xs btn-primary quick-bid-btn" data-value="5" data-roomid="${room.id}">+5</button>
+                                    <button class="flex-1 btn !p-1 text-xs btn-primary quick-bid-btn" data-value="10" data-roomid="${room.id}">+10</button>
+                                </div>
+                                <button class="text-xs text-red-500 mt-2 leave-btn" data-roomid="${room.id}">Salir</button>
+                            </div>`;
+                        }
+                    } else {
+                        actionHTML = `<button class="btn btn-primary join-btn w-full" data-roomid="${room.id}" ${inAnotherRoom ? 'disabled' : ''}>${inAnotherRoom ? 'En otra subasta' : 'Unirse'}</button>`;
+                    }
+                } else {
+                     actionHTML = `<div class="flex items-center justify-center gap-2">
+                           <button title="${room.status === 'active' ? 'Pausar' : 'Reanudar'}" class="btn bg-yellow-500 hover:bg-yellow-600 text-white w-10 h-10 p-0 pause-resume-btn" data-roomid="${room.id}">${room.status === 'active' ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>'}</button>
+                           <button title="Reiniciar Subasta" class="btn bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 p-0 restart-btn" data-roomid="${room.id}"><i class="fas fa-redo"></i></button>
+                           <button title="Terminar Subasta" class="btn bg-red-600 hover:bg-red-700 text-white w-10 h-10 p-0 end-btn" data-roomid="${room.id}"><i class="fas fa-flag-checkered"></i></button>
+                        </div>`;
+                }
+                return `<div class="flex flex-col sm:flex-row justify-between items-center w-full p-4 border-b border-[var(--border-color)] gap-4 hover:bg-black/5 transition-colors duration-200" id="room-${room.id}">
+                            <div class="flex-1 text-center sm:text-left cursor-pointer room-item-clickable" data-roomid="${room.id}">
+                                <p class="font-bold text-xl">${room.name}</p><p class="font-semibold text-lg text-yellow-500">${room.item}</p>
+                            </div>
+                            <div class="flex-1 text-center my-4 sm:my-0">
+                                <p class="text-sm text-[var(--text-secondary)]">PUJA ACTUAL</p><p class="text-4xl font-bold">${room.highestBid}</p>
+                                <p class="text-md text-[var(--text-secondary)]">Por: <span class="font-semibold text-[var(--text-primary)]">${room.highestBidder}</span></p>
+                            </div>
+                            <div class="flex-1 flex flex-col items-center sm:items-end gap-2 w-full sm:w-auto">
+                                <div id="countdown-${room.id}" class="countdown-timer text-2xl font-bold ${room.status === 'paused' ? 'text-yellow-500' : 'text-green-600'}"></div>
+                                <div class="w-full max-w-[250px]">${actionHTML}</div>
+                            </div></div>`;
+            }
+
+            function startCountdownTimer(roomId, elementId, onEndCallback) {
+                if (state.activeTimers[roomId]) clearInterval(state.activeTimers[roomId]);
+                const element = document.getElementById(elementId);
+                const room = state.rooms.find(r => r.id === roomId);
+                if (!element || !room || room.status === 'ended') return;
+                const update = () => {
+                    let distance = room.status === 'paused' ? room.remainingTimeOnPause : room.endTime - Date.now();
+                    if (room.status === 'paused') {
+                        element.textContent = "PAUSADA";
+                        element.classList.add('text-yellow-500'); element.classList.remove('text-green-600', 'text-red-500');
+                    } else if (distance < 0) {
+                        element.textContent = 'FINALIZADA';
+                        clearInterval(state.activeTimers[roomId]);
+                        if (state.currentUser.type === 'teacher' && room.status !== 'ended') updateRoomStatus(roomId, 'ended');
+                        if (onEndCallback) onEndCallback();
+                    } else {
+                        const h = Math.floor(distance / 3600000), m = Math.floor((distance % 3600000) / 60000), s = Math.floor((distance % 60000) / 1000);
+                        element.textContent = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                        element.classList.remove('text-yellow-500');
+                        element.classList.toggle('text-red-500', distance < ANTI_SNIPE_WINDOW && room.enableAntiSnipe);
+                    }
+                };
+                update();
+                state.activeTimers[roomId] = setInterval(update, 1000);
+            }
+
+            function renderFullscreenView(roomId) {
+                const { overlay, content } = DOMElements.fullscreen;
+                const room = state.rooms.find(r => r.id === roomId);
+                if (!room) return closeFullscreen();
+                overlay.dataset.roomId = roomId;
+                let actionHTML = '', participantsHTML = '';
+
+                if (room.status === 'ended') {
+                    actionHTML = `<div class="w-full max-w-lg text-center font-bold p-4 bg-green-100 rounded-lg winner-announcement">
+                        <p class="text-2xl text-green-800">¡Subasta Finalizada!</p>
+                        <p class="text-4xl text-green-900 mt-2">Ganador: ${room.highestBidder}</p></div>`;
+                } else if (state.currentUser.type === 'student') {
+                    if (state.currentUser.joinedRoomId === room.id) {
+                        if (room.status === 'paused') {
+                            actionHTML = `<div class="w-full max-w-sm text-center font-bold text-yellow-600 p-4 bg-yellow-100 rounded-md text-2xl">Subasta Pausada</div>`;
+                        } else {
+                            const nextBid = room.highestBid + 1;
+                            const isCoolingDown = state.cooldownEndTimes[room.id] && Date.now() < state.cooldownEndTimes[room.id];
+                            actionHTML = `<div class="w-full max-w-sm"><div class="flex items-center gap-2">
+                                <input type="number" placeholder="Mín. ${nextBid}" min="${nextBid}" class="input-field text-xl p-4 fullscreen-bid-input w-full" data-roomid="${room.id}" value="${state.inputValues[room.id] || ''}">
+                                <button class="btn btn-primary text-xl p-4 fullscreen-bid-btn whitespace-nowrap" data-roomid="${room.id}" ${isCoolingDown ? 'disabled' : ''}>
+                                    <span>Pujar</span><i class="fas fa-spinner fa-spin hidden"></i>
+                                </button></div>
+                                <div class="flex gap-2 mt-2">
+                                    <button class="flex-1 btn !p-2 text-sm btn-primary quick-bid-btn" data-value="1" data-roomid="${room.id}">+1</button>
+                                    <button class="flex-1 btn !p-2 text-sm btn-primary quick-bid-btn" data-value="5" data-roomid="${room.id}">+5</button>
+                                    <button class="flex-1 btn !p-2 text-sm btn-primary quick-bid-btn" data-value="10" data-roomid="${room.id}">+10</button>
+                                </div><button class="text-sm text-red-500 mt-4 leave-btn" data-roomid="${room.id}">Salir de la subasta</button></div>`;
+                        }
+                    } else {
+                         actionHTML = `<button class="btn btn-primary join-btn" data-roomid="${room.id}">Unirse a la Subasta</button>`;
+                    }
+                } else { // Teacher view
+                    actionHTML = `<div class="flex items-center justify-center gap-2 w-full max-w-md mt-4">
+                        <button class="btn bg-yellow-500 text-white flex-1 pause-resume-btn" data-roomid="${room.id}">${room.status === 'active' ? '<i class="fas fa-pause mr-2"></i>Pausar' : '<i class="fas fa-play mr-2"></i>Reanudar'}</button>
+                        <button class="btn bg-blue-600 text-white flex-1 restart-btn" data-roomid="${room.id}"><i class="fas fa-redo mr-2"></i>Reiniciar</button>
+                        <button class="btn bg-red-600 text-white flex-1 end-btn" data-roomid="${room.id}"><i class="fas fa-flag-checkered mr-2"></i>Terminar</button></div>`;
+                    if (room.participants?.length > 0) {
+                        participantsHTML = `<div class="mt-4 text-sm"><p class="font-bold">Participantes (${room.participants.length}):</p><p class="text-[var(--text-secondary)]">${room.participants.join(', ')}</p></div>`;
+                    }
+                }
+                
+                content.innerHTML = `
+                    <button id="close-fullscreen-btn" class="absolute top-4 right-6 text-3xl text-[var(--text-secondary)] hover:text-[var(--text-primary)]">&times;</button>
+                    <h2 class="text-4xl font-bold mb-2">${room.name}</h2>
+                    <h3 class="text-3xl font-semibold text-yellow-500 mb-8">${room.item}</h3>
+                    <div id="fullscreen-countdown" class="countdown-timer text-6xl font-bold mb-8"></div>
+                    <div class="bg-[var(--background-color)] p-6 rounded-lg mb-8">
+                        <p class="text-xl text-[var(--text-secondary)]">PUJA ACTUAL</p>
+                        <p class="text-7xl font-bold">${room.highestBid}</p>
+                        <p class="text-2xl text-[var(--text-secondary)]">Por: <span class="font-semibold text-[var(--text-primary)]">${room.highestBidder}</span></p>
+                    </div>
+                    ${actionHTML} ${participantsHTML}`;
+                
+                if (room.status !== 'ended') {
+                    startCountdownTimer(room.id, 'fullscreen-countdown', () => renderFullscreenView(roomId));
+                } else if (state.activeTimers[room.id]) {
+                    clearInterval(state.activeTimers[room.id]);
+                    document.getElementById('fullscreen-countdown').textContent = 'FINALIZADA';
+                }
+                overlay.classList.add('active');
+                applyVisualCooldowns();
+            }
+
+            function closeFullscreen() {
+                DOMElements.fullscreen.overlay.classList.remove('active');
+                delete DOMElements.fullscreen.overlay.dataset.roomId;
+            }
+
+            function setupInitialListeners() {
+                document.getElementById('select-student-btn').addEventListener('click', () => {
+                    DOMElements.loginForm.teacherFields.style.display = 'none';
+                    DOMElements.loginForm.studentFields.style.display = 'block';
+                    DOMElements.loginForm.title.textContent = 'Acceso de Estudiante';
+                    DOMElements.loginForm.loginBtn.querySelector('span').textContent = 'Acceder';
+                    loadStudentSelectionData();
+                    switchView('loginView');
+                });
+                document.getElementById('select-teacher-btn').addEventListener('click', () => {
+                    DOMElements.loginForm.teacherFields.style.display = 'block';
+                    DOMElements.loginForm.studentFields.style.display = 'none';
+                    DOMElements.loginForm.title.textContent = 'Acceso de Administrador';
+                    DOMElements.loginForm.loginBtn.querySelector('span').textContent = 'Acceder';
+                    switchView('loginView');
+                });
+                
+                DOMElements.loginForm.loginBtn.addEventListener('click', handleLogin);
+                DOMElements.createRoomModal.form.addEventListener('submit', handleCreateRoom);
+                document.getElementById('logout-btn').addEventListener('click', handleLogout);
+                document.querySelector('.back-to-role-selection').addEventListener('click', () => switchView('roleSelectionView'));
+
+                // El listener del botón de tema ha sido eliminado
+
+                document.body.addEventListener('input', e => {
+                    const target = e.target;
+                    if (target.matches('.bid-input, .fullscreen-bid-input')) {
+                        const roomId = target.dataset.roomid;
+                        if (roomId) {
+                            state.inputValues[roomId] = target.value;
+                        }
+                    }
+                });
+
+                document.body.addEventListener('click', e => {
+                    const target = e.target;
+                    
+                    if (target.closest('#create-room-btn')) return toggleModal('createRoomModal', true);
+                    if (target.closest('#close-modal-btn') || target.id === 'create-room-modal') return toggleModal('createRoomModal', false);
+                    if (target.closest('#close-fullscreen-btn') || target.id === 'fullscreen-room-overlay') return closeFullscreen();
+                    if (target.closest('#refresh-pinceles-btn')) return handleRefreshPinceles();
+
+                    const button = target.closest('button[data-roomid]');
+                    const clickableArea = target.closest('.room-item-clickable[data-roomid]');
+
+                    if (button) {
+                        const roomId = button.dataset.roomid;
+                        if (button.matches('.join-btn')) return handleJoinLeaveRoom(roomId, 'join');
+                        if (button.matches('.leave-btn')) return handleJoinLeaveRoom(roomId, 'leave');
+                        if (button.matches('.bid-btn, .fullscreen-bid-btn')) {
+                            const container = button.closest('.card, #fullscreen-room-content');
+                            const input = container.querySelector('.bid-input, .fullscreen-bid-input');
+                            if (!input || !input.value || isNaN(parseInt(input.value))) {
+                                return showToast("Por favor, introduce un valor de puja válido.", "error");
+                            }
+                            handleBid(roomId, parseInt(input.value, 10), button);
+                        }
+                        if (button.matches('.quick-bid-btn')) {
+                            const container = button.closest('.card, #fullscreen-room-content');
+                            const input = container.querySelector('.bid-input, .fullscreen-bid-input');
+                            const room = state.rooms.find(r => r.id === roomId);
+                            if (room && input) {
+                                const currentVal = parseInt(input.value) || room.highestBid;
+                                input.value = currentVal + parseInt(button.dataset.value);
+                                state.inputValues[roomId] = input.value;
+                            }
+                        }
+                        if (button.matches('.end-btn')) return updateRoomStatus(roomId, 'ended');
+                        if (button.matches('.pause-resume-btn')) {
+                            const room = state.rooms.find(r => r.id === roomId);
+                            if (room) updateRoomStatus(roomId, room.status === 'active' ? 'paused' : 'active');
+                        }
+                        if (button.matches('.restart-btn')) return updateRoomStatus(roomId, 'restarted');
+                        if (button.matches('.delete-room-btn')) return handleDeleteRoom(roomId);
+                    } else if (clickableArea) {
+                        renderFullscreenView(clickableArea.dataset.roomid);
+                    }
+                });
+
+                document.addEventListener('keydown', (e) => e.key === 'Escape' && DOMElements.fullscreen.overlay.classList.contains('active') && closeFullscreen());
+            }
+
+            // La lógica para establecer el tema inicial ha sido eliminada
+            setupInitialListeners();
+            initializeFirebase();
+        });
+    </script>
+</body>
+</html>
