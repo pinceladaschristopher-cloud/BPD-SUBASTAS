@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8"> <!-- CORREGIDO (de UTF-CON-8) -->
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Subastas - Pincel Dorado</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -35,7 +35,6 @@
         .input-field::placeholder { color: #888888; }
         .input-field:focus { outline: none; border-color: var(--accent-gold); box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2); }
         
-        /* CAMBIO: Efecto de desenfoque claro */
         .modal-overlay { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(255, 255, 255, 0.7); /* Blanco translúcido */
@@ -141,7 +140,6 @@
                 <input type="text" id="room-item" placeholder="Elemento a subastar" class="input-field" required>
                 <input type="number" id="room-min-bid" placeholder="Puja Inicial" class="input-field" min="1" required>
                 
-                <!-- CAMBIO: Duración flexible -->
                 <div>
                     <label class="block text-sm font-medium mb-1">Duración:</label>
                     <div class="flex gap-2">
@@ -151,7 +149,6 @@
                     </div>
                 </div>
 
-                <!-- CAMBIO: Límite de acceso -->
                 <div>
                     <label for="room-access-group" class="block text-sm font-medium mb-1">Acceso:</label>
                     <select id="room-access-group" class="input-field">
@@ -184,7 +181,6 @@
     <div id="broadcast-modal-overlay" class="modal-overlay">
         <div class="modal-content card p-8 w-full max-w-lg text-center">
             <h2 id="broadcast-modal-title" class="text-3xl font-bold text-yellow-500 mb-4">Aviso del Administrador</h2>
-            <!-- CAMBIO: Se usa innerHTML para renderizar formato -->
             <div id="broadcast-message-content" class="text-left mb-6 max-h-60 overflow-y-auto"></div>
             <button id="close-broadcast-modal" class="btn btn-primary w-full">Entendido</button>
         </div>
@@ -279,7 +275,6 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        // CORRECCIÓN: Importación correcta
         import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, arrayUnion, deleteDoc, arrayRemove, runTransaction, query, where, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -292,8 +287,8 @@
             const state = {
                 currentUser: null, rooms: [], studentDataCache: null, isFirebaseReady: false, 
                 activeTimers: {}, inputValues: {}, cooldownEndTimes: {},
-                messageListenerUnsubscribe: null, // Para el listener de mensajes
-                currentMessageId: null, // Para el mensaje que se está mostrando
+                messageListenerUnsubscribe: null, 
+                currentMessageId: null, 
             };
 
             const DOMElements = {
@@ -461,6 +456,12 @@
             async function handleSendMessage() {
                 const { targetType, targetGroup, targetUser, title, editor, sendBtn } = DOMElements.messageModal;
                 
+                // BUGFIX: Comprobar si los datos están cargados
+                if (!state.studentDataCache) {
+                    showToast("Datos de estudiantes no cargados. Intenta de nuevo.", "error");
+                    return;
+                }
+
                 const type = targetType.value;
                 const htmlContent = editor.innerHTML;
                 const messageTitle = title.value.trim() || "Nuevo Mensaje";
@@ -501,7 +502,6 @@
                         throw new Error("No se encontraron destinatarios.");
                     }
                     
-                    // Eliminar duplicados si los hubiera
                     const uniqueTargets = [...new Set(targetStudents)];
 
                     const promises = uniqueTargets.map(studentName => {
@@ -536,7 +536,7 @@
 
                 state.messageListenerUnsubscribe = onSnapshot(messagesQuery, (snapshot) => {
                     if (snapshot.empty || state.currentMessageId) {
-                        return; // No hay mensajes sin leer, o ya se está mostrando uno
+                        return; 
                     }
 
                     const firstUnreadDoc = snapshot.docs[0];
@@ -545,7 +545,7 @@
                     state.currentMessageId = firstUnreadDoc.id; 
 
                     DOMElements.broadcastModal.title.textContent = message.title || "Aviso del Administrador";
-                    DOMElements.broadcastModal.content.innerHTML = message.htmlContent; // Renderiza HTML
+                    DOMElements.broadcastModal.content.innerHTML = message.htmlContent; 
                     DOMElements.broadcastModal.overlay.classList.add('active');
 
                 }, (error) => {
@@ -564,7 +564,7 @@
 
                 try {
                     await updateDoc(messageRef, { read: true });
-                    state.currentMessageId = null; // Limpiar para que pueda entrar el próximo mensaje
+                    state.currentMessageId = null; 
                 } catch (e) {
                     console.error("Error al marcar mensaje como leído:", e);
                 }
@@ -585,7 +585,6 @@
                         const oldRooms = state.rooms;
                         state.rooms = processedRooms;
 
-                        // Lógica para sacar/banear estudiante
                         if (state.currentUser && state.currentUser.type === 'student' && state.currentUser.joinedRoomId) {
                             const myRoom = state.rooms.find(r => r.id === state.currentUser.joinedRoomId);
                             
@@ -663,13 +662,13 @@
                     if (!studentNameSelect.value) {
                         error.textContent = 'Por favor, selecciona tu curso y nombre.';
                         error.classList.remove('hidden');
-                        toggleSpinner(loginBtn, false); // Detener spinner en error
+                        toggleSpinner(loginBtn, false); 
                     } else {
                         state.currentUser = { type: 'student', data: JSON.parse(studentNameSelect.value), joinedRoomId: null };
                         setupUserMessagesListener(state.currentUser.data.nombre);
                         renderDashboard();
                         switchView('studentDashboard');
-                        toggleSpinner(loginBtn, false); // Detener spinner en éxito
+                        toggleSpinner(loginBtn, false); 
                     }
                 } else {
                     if (teacherPassword.value === TEACHER_PASSWORD) {
@@ -680,7 +679,7 @@
                         error.textContent = 'Clave incorrecta.';
                         error.classList.remove('hidden');
                     }
-                    toggleSpinner(loginBtn, false); // Detener spinner en éxito/error de admin
+                    toggleSpinner(loginBtn, false); 
                 }
             }
 
@@ -762,6 +761,13 @@
                     toggleSpinner(submitBtn, false);
                     return;
                 }
+                
+                // BUGFIX: Comprobar si los datos están cargados
+                if (!state.studentDataCache) {
+                    showToast("Datos de estudiantes no cargados. No se puede crear la sala.", "error");
+                    toggleSpinner(submitBtn, false);
+                    return;
+                }
 
                 try {
                     await addDoc(collection(db, "auctionRooms"), {
@@ -821,7 +827,6 @@
                         participants: arrayRemove(participantName)
                     });
                     showToast(`'${participantName}' ha sido sacado de la sala.`, "success");
-                    // Refrescar el modal de gestión si está abierto
                     if (DOMElements.manageRoomModal.overlay.classList.contains('active')) {
                         showManageModal(roomId);
                     }
@@ -839,7 +844,6 @@
                         bannedUsers: arrayUnion(participantName)
                     });
                     showToast(`'${participantName}' ha sido BANEADO de la sala.`, "success");
-                    // Refrescar el modal de gestión si está abierto
                     if (DOMElements.manageRoomModal.overlay.classList.contains('active')) {
                         showManageModal(roomId);
                     }
@@ -1024,6 +1028,8 @@
 
             function showMessagingModal() {
                 const { targetGroup, targetUser } = DOMElements.messageModal;
+                
+                // BUGFIX: Comprobar si los datos están cargados
                 if (!state.studentDataCache) {
                     showToast("Datos de estudiantes no cargados. Intenta de nuevo.", "error");
                     return;
@@ -1043,13 +1049,11 @@
                         allStudents.push(...course.usuarios);
                     }
                 });
-                // Ordenar alfabéticamente
                 allStudents.sort((a, b) => a.nombre.localeCompare(b.nombre));
                 allStudents.forEach(student => {
                     targetUser.innerHTML += `<option value="${student.nombre}">${student.nombre} (${student.course})</option>`;
                 });
                 
-                // Ocultar selectores
                 document.getElementById('message-target-group-container').classList.add('hidden');
                 document.getElementById('message-target-user-container').classList.add('hidden');
                 
@@ -1064,7 +1068,6 @@
 
                 title.textContent = `Gestionar: ${room.name}`;
                 
-                // 1. Poblar controles de sala (con iconos)
                 controlsContainer.innerHTML = `
                     <button class="btn bg-yellow-500 text-white w-12 h-12 p-0 pause-resume-btn" 
                             title="${room.status === 'active' ? 'Pausar' : 'Reanudar'}" data-roomid="${room.id}">
@@ -1080,7 +1083,6 @@
                     </button>
                 `;
 
-                // 2. Poblar lista de participantes
                 const participants = room.participants || [];
                 if (participants.length === 0) {
                     participantsList.innerHTML = `<p class="text-[var(--text-secondary)] text-center">No hay participantes unidos.</p>`;
@@ -1116,7 +1118,6 @@
                 const container = DOMElements.views[dashboardId];
                 if (!container) return;
 
-                // CORRECCIÓN: Comentario movido fuera del template literal
                 const headerHTML = state.currentUser.type === 'student' ?
                     `<div class="flex justify-between items-center mb-4">
                         <h2 class="text-2xl font-bold">Salas de Subasta</h2>
@@ -1142,7 +1143,6 @@
                         </div>
                      </div>`;
                 
-                // CORRECCIÓN: Limpieza de timers al inicio de CADA render
                 Object.values(state.activeTimers).forEach(clearInterval);
                 state.activeTimers = {};
                 
@@ -1154,7 +1154,6 @@
                 }
                 container.innerHTML = headerHTML + roomsHTML + `</div>`;
                 
-                // Iniciar timers SOLO para elementos visibles
                 state.rooms.filter(r => r.status !== 'ended').forEach(room => {
                     const elementId = `countdown-${room.id}`;
                     if (document.getElementById(elementId)) {
@@ -1182,7 +1181,6 @@
                     const hasJoined = state.currentUser.joinedRoomId === room.id;
                     const inAnotherRoom = state.currentUser.joinedRoomId && !hasJoined;
                     
-                    // Comprobar baneo y grupo
                     const isBanned = room.bannedUsers && room.bannedUsers.includes(state.currentUser.data.nombre);
                     const isGroupAllowed = room.allowedGroup === 'all' || room.allowedGroup === state.currentUser.data.course;
                     let joinButtonText = 'Unirse';
@@ -1230,18 +1228,17 @@
                         </div>`;
                 }
                 
-                // Botón de miembros para estudiantes
                 let membersButton = '';
                 const participantsCount = room.participants?.length || 0;
                 if (userType === 'student') {
                     membersButton = `
-                        <button class_fast="btn !p-2 !text-xs bg-gray-100 text-[var(--text-secondary)] participants-btn" data-roomid="${room.id}" title="Ver miembros">
+                        <button class="btn !p-2 !text-xs bg-gray-100 text-[var(--text-secondary)] participants-btn" data-roomid="${room.id}" title="Ver miembros">
                             <i class="fas fa-users"></i>
                             <span class="ml-1">${participantsCount}</span>
                         </button>`;
                 }
 
-                // CORRECCIÓN: Organización de la 3a columna
+                // CAMBIO: Contenedor del contador centrado y texto más grande
                 return `<div class="flex flex-col sm:flex-row justify-between items-center w-full p-4 border-b border-[var(--border-color)] gap-4 hover:bg-black/5 transition-colors duration-200" id="room-${room.id}">
                             <div class="flex-1 text-center sm:text-left cursor-pointer room-item-clickable" data-roomid="${room.id}">
                                 <p class="font-bold text-xl">${room.name}</p><p class="font-semibold text-lg text-yellow-500">${room.item}</p>
@@ -1250,9 +1247,9 @@
                                 <p class="text-sm text-[var(--text-secondary)]">PUJA ACTUAL</p><p class="text-4xl font-bold">${room.highestBid}</p>
                                 <p class="text-md text-[var(--text-secondary)]">Por: <span class="font-semibold text-[var(--text-primary)]">${room.highestBidder}</span></p>
                             </div>
-                            <div class="flex-1 flex flex-col items-center sm:items-stretch gap-2 w-full sm:w-auto">
-                                <div class="flex justify-between items-center gap-2">
-                                    <div id="countdown-${room.id}" class="countdown-timer text-2xl font-bold ${room.status === 'paused' ? 'text-yellow-500' : 'text-green-600'}"></div>
+                            <div class="flex-1 flex flex-col items-center justify-center gap-2 w-full sm:w-auto">
+                                <div class="flex justify-center items-center gap-2 w-full">
+                                    <div id="countdown-${room.id}" class="countdown-timer text-4xl font-bold ${room.status === 'paused' ? 'text-yellow-500' : 'text-green-600'}"></div>
                                     ${membersButton}
                                 </div>
                                 <div class="w-full">${actionHTML}</div>
@@ -1260,7 +1257,6 @@
             }
 
             function startCountdownTimer(roomId, elementId, onEndCallback) {
-                // CORRECCIÓN: Usar elementId como clave para el timer
                 const timerKey = elementId;
                 
                 if (state.activeTimers[timerKey]) {
@@ -1277,7 +1273,6 @@
                 }
                 
                 const update = () => {
-                    // Volver a buscar la sala, ya que el estado puede haber cambiado
                     const currentRoom = state.rooms.find(r => r.id === roomId);
                     if (!currentRoom) {
                          clearInterval(state.activeTimers[timerKey]);
@@ -1405,7 +1400,6 @@
                         <p class="text-2xl text-[var(--text-secondary)]">Por: <span class="font-semibold text-[var(--text-primary)]">${room.highestBidder}</span></p>
                     </div>
                     
-                    <!-- Contenedor unificado para controles -->
                     <div class="w-full max-w-md flex flex-col items-center space-y-4">
                         ${controlsHTML}
                         ${actionHTML}
@@ -1413,7 +1407,7 @@
                     </div>`;
                 
                 const fsTimerId = `fullscreen-countdown-${room.id}`;
-                content.querySelector('.countdown-timer').id = fsTimerId; // Asignar ID único
+                content.querySelector('.countdown-timer').id = fsTimerId; 
                 
                 if (room.status !== 'ended') {
                     startCountdownTimer(room.id, fsTimerId, () => renderFullscreenView(roomId));
@@ -1427,7 +1421,6 @@
             }
 
             function closeFullscreen() {
-                // CORRECCIÓN: Limpiar el timer de la vista fullscreen al cerrar
                 const fsRoomId = DOMElements.fullscreen.overlay.dataset.roomId;
                 if (fsRoomId) {
                     const timerKey = `fullscreen-countdown-${fsRoomId}`;
@@ -1441,7 +1434,6 @@
             }
 
             function setupInitialListeners() {
-                // CORRECCIÓN: Añadir 'if' para prevenir errores si el elemento no carga a tiempo
                 
                 if (document.getElementById('select-student-btn')) {
                     document.getElementById('select-student-btn').addEventListener('click', () => {
@@ -1460,6 +1452,7 @@
                         DOMElements.loginForm.studentFields.style.display = 'none';
                         DOMElements.loginForm.title.textContent = 'Acceso de Administrador';
                         DOMElements.loginForm.loginBtn.querySelector('span').textContent = 'Acceder';
+                        loadStudentSelectionData(); // <--- ***** CAMBIO AQUÍ: Cargar datos para el admin *****
                         switchView('loginView');
                     });
                 } else { console.error("Error: select-teacher-btn no encontrado."); }
@@ -1537,13 +1530,17 @@
                     const target = e.target;
                     
                     if (target.closest('#create-room-btn')) {
-                        // Poblar select de grupos al abrir
                         const groupSelect = DOMElements.createRoomModal.accessGroup;
                         groupSelect.innerHTML = '<option value="all">General (Todos los grupos)</option>';
+                        
+                        // BUGFIX: Comprobar si los datos están cargados
                         if (state.studentDataCache) {
                             Object.keys(state.studentDataCache).forEach(courseName => {
                                 groupSelect.innerHTML += `<option value="${courseName}">Solo ${courseName}</option>`;
                             });
+                        } else {
+                            console.warn("Datos de estudiantes no cargados al abrir modal de creación.");
+                            // No es necesario un toast aquí, la comprobación se hará al enviar
                         }
                         return toggleModal('createRoomModal', true);
                     }
@@ -1581,7 +1578,6 @@
                             }
                         }
                         
-                        // Controles de sala (delegados)
                         if (button.matches('.end-btn')) return updateRoomStatus(roomId, 'ended');
                         if (button.matches('.pause-resume-btn')) {
                             const room = state.rooms.find(r => r.id === roomId);
@@ -1589,7 +1585,6 @@
                         }
                         if (button.matches('.restart-btn')) return updateRoomStatus(roomId, 'restarted');
                         
-                        // Controles de admin
                         if (button.matches('.delete-room-btn')) return handleDeleteRoom(roomId);
                         if (button.matches('.delete-bid-btn')) {
                             const bidData = button.dataset;
