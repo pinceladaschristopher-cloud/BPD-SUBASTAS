@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-CON-8">
+    <meta charset="UTF-8"> <!-- CORREGIDO (de UTF-CON-8) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Subastas - Pincel Dorado</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -9,19 +9,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
-            /* Colores actualizados para una interfaz clara con texto negro */
             --background-color: #ffffff;
             --card-bg: #ffffff;
-            --text-primary: #000000; /* Texto principal en negro */
-            --text-secondary: #000000; /* Texto secundario en negro */
+            --text-primary: #000000;
+            --text-secondary: #000000;
             --border-color: #e5e7eb;
-            --accent-gold: #FFD700; /* El color dorado se mantiene */
-            --accent-gold-text: #423000; /* El texto sobre dorado se mantiene */
+            --accent-gold: #FFD700;
+            --accent-gold-text: #423000;
             --btn-primary-bg: #f3f4f6;
             --btn-primary-hover: #e5e7eb;
-            --btn-primary-text: #000000; /* Texto de botones en negro */
+            --btn-primary-text: #000000;
         }
-        /* La regla de modo oscuro ha sido eliminada */
         body { font-family: 'Inter', sans-serif; background-color: var(--background-color); color: var(--text-primary); transition: background-color 0.3s, color 0.3s; }
         .view { display: none; }
         .view-active { display: flex; }
@@ -34,12 +32,22 @@
         .btn-accent { background-color: var(--accent-gold); color: var(--accent-gold-text); }
         .btn-accent:hover:not(:disabled) { background-color: #e6c200; }
         .input-field { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--card-bg); color: var(--text-primary); transition: background-color 0.3s, border-color 0.3s, color 0.3s; }
-        .input-field::placeholder { color: #888888; } /* Placeholder ajustado para visibilidad */
+        .input-field::placeholder { color: #888888; }
         .input-field:focus { outline: none; border-color: var(--accent-gold); box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2); }
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+        
+        /* CAMBIO: Efecto de desenfoque claro */
+        .modal-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(255, 255, 255, 0.7); /* Blanco translúcido */
+            backdrop-filter: blur(8px); 
+            z-index: 1000; display: flex; align-items: center; justify-content: center; 
+            padding: 1rem; opacity: 0; visibility: hidden; 
+            transition: opacity 0.3s ease, visibility 0.3s ease; 
+        }
         .modal-overlay.active { opacity: 1; visibility: visible; }
         .modal-content { transform: scale(0.95) translateY(10px); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .modal-overlay.active .modal-content { transform: scale(1) translateY(0); }
+        
         .winner-announcement { animation: fadeIn 0.5s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         #toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.75rem; }
@@ -51,12 +59,25 @@
         @keyframes pulse-bg { 0% { background-color: rgba(255, 215, 0, 0.2); } 100% { background-color: transparent; } }
         .highlight-update { animation: pulse-bg 1.5s ease-out; }
         .countdown-timer { font-variant-numeric: tabular-nums; }
+        
+        /* Estilos para el editor de mensajes */
+        [contenteditable]:focus { outline: none; }
+        .message-editor-toolbar button {
+            width: 2.5rem; height: 2.5rem;
+            background-color: var(--btn-primary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+        .message-editor-toolbar button:hover {
+            background-color: var(--btn-primary-hover);
+        }
     </style>
 </head>
 <body>
 
     <div id="toast-container"></div>
 
+    <!-- ===== VISTAS DE LOGIN Y ROLES ===== -->
     <div id="role-selection-view" class="view view-active flex-col items-center justify-center min-h-screen p-4">
         <div class="max-w-lg text-center w-full">
             <h1 class="text-3xl font-bold text-[var(--accent-gold)] mb-2">Subastas "Pincel Dorado"</h1>
@@ -90,6 +111,7 @@
         </div>
     </div>
 
+    <!-- ===== CONTENEDOR PRINCIPAL DE LA APP ===== -->
     <div id="main-container" class="p-4 md:p-6 hidden">
         <header id="app-header" class="p-4 mb-6 flex justify-between items-center hidden border-b border-[var(--border-color)]">
             <div id="header-title" class="text-xl font-bold flex items-center gap-2"></div>
@@ -107,6 +129,7 @@
         <div id="teacher-dashboard" class="view"></div>
     </div>
 
+    <!-- ===== MODAL DE CREAR SALA (MEJORADO) ===== -->
     <div id="create-room-modal" class="modal-overlay">
         <div class="modal-content card p-8 w-full max-w-lg">
             <div class="flex justify-between items-center mb-6">
@@ -117,7 +140,26 @@
                 <input type="text" id="room-name" placeholder="Nombre de la Sala" class="input-field" required>
                 <input type="text" id="room-item" placeholder="Elemento a subastar" class="input-field" required>
                 <input type="number" id="room-min-bid" placeholder="Puja Inicial" class="input-field" min="1" required>
-                <input type="number" id="room-duration" placeholder="Duración en minutos" class="input-field" min="1" required>
+                
+                <!-- CAMBIO: Duración flexible -->
+                <div>
+                    <label class="block text-sm font-medium mb-1">Duración:</label>
+                    <div class="flex gap-2">
+                        <input type="number" id="room-duration-days" placeholder="Días" class="input-field text-center" min="0">
+                        <input type="number" id="room-duration-hours" placeholder="Horas" class="input-field text-center" min="0" max="23">
+                        <input type="number" id="room-duration-mins" placeholder="Min" class="input-field text-center" min="0" max="59">
+                    </div>
+                </div>
+
+                <!-- CAMBIO: Límite de acceso -->
+                <div>
+                    <label for="room-access-group" class="block text-sm font-medium mb-1">Acceso:</label>
+                    <select id="room-access-group" class="input-field">
+                        <option value="all">General (Todos los grupos)</option>
+                        <!-- Opciones de grupo se cargarán aquí -->
+                    </select>
+                </div>
+                
                 <div class="flex items-center justify-between bg-gray-100 p-3 rounded-lg">
                     <label for="room-anti-snipe" class="font-medium text-sm">Activar Anti-Francotirador (Soft Close)</label>
                     <input type="checkbox" id="room-anti-snipe" class="h-5 w-5 rounded text-yellow-500 focus:ring-yellow-400">
@@ -131,28 +173,114 @@
         </div>
     </div>
 
+    <!-- ===== MODAL DE VISTA COMPLETA (FULLSCREEN) ===== -->
     <div id="fullscreen-room-overlay" class="modal-overlay">
-        <div id="fullscreen-room-content" class="w-full h-full p-4 sm:p-8 flex flex-col justify-center items-center text-center relative rounded-lg bg-[var(--background-color)]">
+        <div id="fullscreen-room-content" class="w-full h-full p-4 sm:p-8 flex flex-col justify-center items-center text-center relative rounded-lg bg-[var(--background-color)] overflow-y-auto">
             <!-- Contenido se inyectará dinámicamente -->
         </div>
     </div>
 
-    <!-- ===== NUEVO: Modal de Notificación Global ===== -->
+    <!-- ===== MODAL DE NOTIFICACIÓN (REUTILIZADO PARA MENSAJES) ===== -->
     <div id="broadcast-modal-overlay" class="modal-overlay">
         <div class="modal-content card p-8 w-full max-w-lg text-center">
-            <h2 class="text-3xl font-bold text-yellow-500 mb-4">Aviso del Administrador</h2>
-            <p id="broadcast-message-content" class="text-xl mb-6"></p>
+            <h2 id="broadcast-modal-title" class="text-3xl font-bold text-yellow-500 mb-4">Aviso del Administrador</h2>
+            <!-- CAMBIO: Se usa innerHTML para renderizar formato -->
+            <div id="broadcast-message-content" class="text-left mb-6 max-h-60 overflow-y-auto"></div>
             <button id="close-broadcast-modal" class="btn btn-primary w-full">Entendido</button>
         </div>
     </div>
-    <!-- ===== FIN de Modal de Notificación ===== -->
+
+    <!-- ===== MODAL DE PARTICIPANTES (SOLO PARA ESTUDIANTES) ===== -->
+    <div id="participants-modal" class="modal-overlay">
+        <div class="modal-content card p-0 w-full max-w-lg">
+            <div class="flex justify-between items-center p-6 border-b border-[var(--border-color)]">
+                <h2 id="participants-modal-title" class="text-2xl font-bold">Miembros en Sala</h2>
+                <button id="participants-modal-close-btn" class="text-gray-400 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div id="participants-modal-list" class="p-6 space-y-2 max-h-80 overflow-y-auto">
+                <!-- Lista de participantes se inyectará aquí -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- ===== MODAL DE GESTIÓN DE SALA (UNIFICADO PARA ADMIN) ===== -->
+    <div id="manage-room-modal" class="modal-overlay">
+        <div class="modal-content card p-0 w-full max-w-lg">
+            <div class="flex justify-between items-center p-6 border-b border-[var(--border-color)]">
+                <h2 id="manage-room-title" class="text-2xl font-bold">Gestionar Sala</h2>
+                <button id="manage-room-close-btn" class="text-gray-400 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <!-- Controles de Sala (Iconos) -->
+            <div id="manage-room-controls" class="p-4 flex justify-center gap-2 bg-gray-50 border-b border-[var(--border-color)]">
+                <!-- Botones se inyectarán aquí -->
+            </div>
+            <!-- Lista de Participantes (para Admin) -->
+            <div class="p-6">
+                <h3 class="text-lg font-semibold mb-3">Participantes</h3>
+                <div id="manage-room-participants-list" class="space-y-2 max-h-60 overflow-y-auto">
+                    <!-- Lista de participantes para admin se inyectará aquí -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL DE MENSAJERÍA AVANZADA ===== -->
+    <div id="message-modal" class="modal-overlay">
+        <div class="modal-content card p-0 w-full max-w-2xl">
+            <div class="flex justify-between items-center p-6 border-b border-[var(--border-color)]">
+                <h2 class="text-2xl font-bold">Enviar Mensaje</h2>
+                <button id="message-modal-close-btn" class="text-gray-400 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="message-target-type" class="block text-sm font-medium mb-1">Enviar a:</label>
+                        <select id="message-target-type" class="input-field">
+                            <option value="global">Global (Todos los estudiantes)</option>
+                            <option value="group">Grupo Específico</option>
+                            <option value="user">Usuario Específico</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="message-modal-title" class="block text-sm font-medium mb-1">Asunto:</label>
+                        <input type="text" id="message-modal-title" placeholder="Asunto del mensaje" class="input-field">
+                    </div>
+                </div>
+                <div id="message-target-group-container" class="hidden">
+                    <label for="message-target-group" class="block text-sm font-medium mb-1">Seleccionar Grupo:</label>
+                    <select id="message-target-group" class="input-field"></select>
+                </div>
+                <div id="message-target-user-container" class="hidden">
+                    <label for="message-target-user" class="block text-sm font-medium mb-1">Seleccionar Usuario:</label>
+                    <select id="message-target-user" class="input-field"></select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">Mensaje:</label>
+                    <div id="message-modal-toolbar" class="message-editor-toolbar flex items-center gap-1 p-2 bg-gray-100 rounded-t-lg border border-b-0 border-[var(--border-color)]">
+                        <button type="button" data-command="bold" title="Negrita"><i class="fas fa-bold"></i></button>
+                        <button type="button" data-command="italic" title="Cursiva"><i class="fas fa-italic"></i></button>
+                        <button type="button" data-command="insertUnorderedList" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+                        <button type="button" data-command="formatBlock" data-value="H3" title="Título"><b>H3</b></button>
+                        <button type="button" data-command="formatBlock" data-value="P" title="Párrafo">P</button>
+                    </div>
+                    <div id="message-modal-editor" contenteditable="true" class="input-field !rounded-t-none h-40 overflow-y-auto" role="textbox"></div>
+                </div>
+            </div>
+            <div class="flex justify-end p-4 bg-gray-50 border-t border-[var(--border-color)]">
+                <button id="message-modal-send-btn" class="btn btn-accent">
+                    <span>Enviar Mensaje</span><i class="fas fa-spinner fa-spin hidden"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        // ===== CAMBIO: Añadido 'onAuthStateChanged' para gestionar el estado de autenticación =====
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, arrayUnion, deleteDoc, arrayRemove, runTransaction, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        // CORRECCIÓN: Importación correcta
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, arrayUnion, deleteDoc, arrayRemove, runTransaction, query, where, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         document.addEventListener('DOMContentLoaded', () => {
             const API_URL = 'https://script.google.com/macros/s/AKfycbzUd8sFN2xAu0AyHgrPCwNVm7PZhnJi0zKAtGoxjOp9n-FsDfcvVWhg-kLhZXqXIIYRxQ/exec';
@@ -164,9 +292,8 @@
             const state = {
                 currentUser: null, rooms: [], studentDataCache: null, isFirebaseReady: false, 
                 activeTimers: {}, inputValues: {}, cooldownEndTimes: {},
-                // ===== CAMBIO: Añadido estado para gestionar el broadcast persistente =====
-                currentBroadcast: null, // Almacenará el último mensaje: { message: "...", timestamp: 12345 }
-                dismissedBroadcastTimestamp: 0, // Almacena el timestamp del último mensaje CERRADO
+                messageListenerUnsubscribe: null, // Para el listener de mensajes
+                currentMessageId: null, // Para el mensaje que se está mostrando
             };
 
             const DOMElements = {
@@ -190,12 +317,47 @@
                 createRoomModal: {
                     overlay: document.getElementById('create-room-modal'), form: document.getElementById('create-room-form'),
                     name: document.getElementById('room-name'), item: document.getElementById('room-item'),
-                    minBid: document.getElementById('room-min-bid'), duration: document.getElementById('room-duration'),
-                    antiSnipe: document.getElementById('room-anti-snipe'), submitBtn: document.getElementById('submit-room-btn'),
+                    minBid: document.getElementById('room-min-bid'), 
+                    durationDays: document.getElementById('room-duration-days'),
+                    durationHours: document.getElementById('room-duration-hours'),
+                    durationMins: document.getElementById('room-duration-mins'),
+                    accessGroup: document.getElementById('room-access-group'),
+                    antiSnipe: document.getElementById('room-anti-snipe'), 
+                    submitBtn: document.getElementById('submit-room-btn'),
                     closeBtn: document.getElementById('close-modal-btn'), error: document.getElementById('modal-error'),
                 },
                 fullscreen: {
                     overlay: document.getElementById('fullscreen-room-overlay'), content: document.getElementById('fullscreen-room-content'),
+                },
+                broadcastModal: { // Para mostrar mensajes
+                    overlay: document.getElementById('broadcast-modal-overlay'),
+                    title: document.getElementById('broadcast-modal-title'),
+                    content: document.getElementById('broadcast-message-content'),
+                    closeBtn: document.getElementById('close-broadcast-modal'),
+                },
+                participantsModal: { // Para estudiantes
+                    overlay: document.getElementById('participants-modal'),
+                    title: document.getElementById('participants-modal-title'),
+                    list: document.getElementById('participants-modal-list'),
+                    closeBtn: document.getElementById('participants-modal-close-btn'),
+                },
+                manageRoomModal: { // Para admin (unificado)
+                    overlay: document.getElementById('manage-room-modal'),
+                    title: document.getElementById('manage-room-title'),
+                    closeBtn: document.getElementById('manage-room-close-btn'),
+                    controlsContainer: document.getElementById('manage-room-controls'),
+                    participantsList: document.getElementById('manage-room-participants-list')
+                },
+                messageModal: { // Para enviar mensajes (admin)
+                    overlay: document.getElementById('message-modal'),
+                    targetType: document.getElementById('message-target-type'),
+                    targetGroup: document.getElementById('message-target-group'),
+                    targetUser: document.getElementById('message-target-user'),
+                    title: document.getElementById('message-modal-title'),
+                    editor: document.getElementById('message-modal-editor'),
+                    toolbar: document.getElementById('message-modal-toolbar'),
+                    sendBtn: document.getElementById('message-modal-send-btn'),
+                    closeBtn: document.getElementById('message-modal-close-btn')
                 },
                 toastContainer: document.getElementById('toast-container'),
             };
@@ -210,33 +372,21 @@
                     const app = initializeApp(firebaseConfig);
                     db = getFirestore(app);
                     auth = getAuth(app);
-                    
-                    // ===== CAMBIO: Movida la lógica del listener a onAuthStateChanged =====
-                    // Esto asegura que los listeners de Firestore solo se adjunten
-                    // DESPUÉS de que Firebase haya confirmado el estado de autenticación.
+
                     onAuthStateChanged(auth, (user) => {
                         if (user) {
-                            // Usuario está autenticado (anónimamente)
-                            if (!state.isFirebaseReady) { 
-                                // Solo ejecutar esto una vez
-                                console.log("Usuario autenticado, adjuntando listeners de Firestore...");
-                                setupAuctionRoomsListener();
-                                setupBroadcastListener();
-                                
-                                state.isFirebaseReady = true;
-                                document.querySelectorAll('#role-buttons button').forEach(btn => {
-                                    btn.disabled = false;
-                                    btn.innerHTML = btn.id.includes('student') ? 'Soy Estudiante' : 'Soy Maestro';
-                                });
-                            }
+                            state.isFirebaseReady = true;
+                            setupAuctionRoomsListener();
+                            
+                            document.querySelectorAll('#role-buttons button').forEach(btn => {
+                                btn.disabled = false;
+                                btn.innerHTML = btn.id.includes('student') ? 'Soy Estudiante' : 'Soy Maestro';
+                            });
                         }
-                        // Si no hay usuario, signInAnonymously (abajo) lo activará,
-                        // y este callback se volverá a ejecutar.
                     });
-
-                    // Iniciar el proceso de inicio de sesión anónimo
-                    await signInAnonymously(auth);
                     
+                    await signInAnonymously(auth);
+
                 } catch (error) {
                     console.error("Firebase initialization failed:", error);
                     const errorDisplay = document.getElementById('init-error-display');
@@ -293,59 +443,133 @@
 
             function toggleModal(modalName, show) {
                 const modal = DOMElements[modalName];
+                if (!modal) {
+                    console.error(`Modal '${modalName}' no encontrado en DOMElements`);
+                    return;
+                }
                 modal.overlay.classList.toggle('active', show);
                 if (!show && modalName === 'createRoomModal') modal.form.reset();
             }
 
-            // ===== NUEVO: Función para enviar notificación global (Admin) =====
-            async function handleSendBroadcast(message) {
-                const broadcastRef = doc(db, "globalState", "broadcast");
+            // ===== FUNCIONES DE MENSAJERÍA AVANZADA =====
+
+            function handleFormatMessage(command, value = null) {
+                document.execCommand(command, false, value);
+                DOMElements.messageModal.editor.focus();
+            }
+
+            async function handleSendMessage() {
+                const { targetType, targetGroup, targetUser, title, editor, sendBtn } = DOMElements.messageModal;
+                
+                const type = targetType.value;
+                const htmlContent = editor.innerHTML;
+                const messageTitle = title.value.trim() || "Nuevo Mensaje";
+
+                if (htmlContent.trim().length === 0) {
+                    showToast("El contenido del mensaje no puede estar vacío.", "error");
+                    return;
+                }
+
+                toggleSpinner(sendBtn, true);
+
                 try {
-                    await setDoc(broadcastRef, {
-                        message: message,
-                        timestamp: Date.now()
-                    });
-                    showToast("Mensaje global enviado.", "success");
-                } catch (e) {
-                    console.error("Error enviando broadcast:", e);
-                    // ===== CAMBIO: Mensaje de error más específico =====
-                    if (e.code === 'permission-denied') {
-                        showToast("Error: Permiso denegado. Revisa las reglas de Firestore para 'globalState/broadcast'.", "error");
-                    } else {
-                        showToast("No se pudo enviar el mensaje.", "error");
+                    const messagePayload = {
+                        title: messageTitle,
+                        htmlContent: htmlContent,
+                        timestamp: Date.now(),
+                        read: false
+                    };
+
+                    let targetStudents = [];
+
+                    if (type === 'global') {
+                        Object.values(state.studentDataCache).forEach(course => {
+                            if (course.usuarios) {
+                                targetStudents.push(...course.usuarios.map(u => u.nombre));
+                            }
+                        });
+                    } else if (type === 'group') {
+                        const groupName = targetGroup.value;
+                        if (state.studentDataCache[groupName] && state.studentDataCache[groupName].usuarios) {
+                            targetStudents = state.studentDataCache[groupName].usuarios.map(u => u.nombre);
+                        }
+                    } else if (type === 'user') {
+                        targetStudents.push(targetUser.value);
                     }
+
+                    if (targetStudents.length === 0) {
+                        throw new Error("No se encontraron destinatarios.");
+                    }
+                    
+                    // Eliminar duplicados si los hubiera
+                    const uniqueTargets = [...new Set(targetStudents)];
+
+                    const promises = uniqueTargets.map(studentName => {
+                        const messageColRef = collection(db, "userMessages", studentName, "messages");
+                        return addDoc(messageColRef, messagePayload);
+                    });
+
+                    await Promise.all(promises);
+
+                    showToast(`Mensaje enviado a ${uniqueTargets.length} destinatario(s).`, "success");
+                    DOMElements.messageModal.overlay.classList.remove('active');
+                    editor.innerHTML = "";
+                    title.value = "";
+
+                } catch (e) {
+                    console.error("Error enviando mensaje:", e);
+                    showToast("Error al enviar el mensaje.", "error");
+                } finally {
+                    toggleSpinner(sendBtn, false);
                 }
             }
 
-            // ===== NUEVO: Listener para notificaciones globales (Estudiantes) =====
-            function setupBroadcastListener() {
-                const broadcastRef = doc(db, "globalState", "broadcast");
-                
-                // ===== CAMBIO: Modificada la lógica del listener =====
-                onSnapshot(broadcastRef, (doc) => {
-                    if (doc.exists()) {
-                        const data = doc.data();
-                        const isNewMessage = !state.currentBroadcast || data.timestamp > state.currentBroadcast.timestamp;
-                        
-                        // Siempre actualiza el broadcast más reciente en el estado
-                        state.currentBroadcast = data; 
+            function setupUserMessagesListener(studentName) {
+                if (state.messageListenerUnsubscribe) {
+                    state.messageListenerUnsubscribe();
+                }
 
-                        // Si es un mensaje nuevo Y hay un estudiante logueado, muéstralo.
-                        if (isNewMessage && state.currentUser && state.currentUser.type === 'student') {
-                            document.getElementById('broadcast-message-content').textContent = data.message;
-                            document.getElementById('broadcast-modal-overlay').classList.add('active');
-                        }
+                const messagesQuery = query(
+                    collection(db, "userMessages", studentName, "messages"),
+                    where("read", "==", false)
+                );
+
+                state.messageListenerUnsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+                    if (snapshot.empty || state.currentMessageId) {
+                        return; // No hay mensajes sin leer, o ya se está mostrando uno
                     }
-                }, (error) => { // ===== CAMBIO: Añadido manejo de errores al listener =====
-                    console.error("Error en listener de Broadcast:", error.message);
-                    // ===== CAMBIO: Notificar al usuario que la función de broadcast fallará =====
-                    // Solo mostramos este error al admin, para no confundir a los estudiantes
-                    if (state.currentUser && state.currentUser.type === 'teacher') {
-                        showToast("Error: No se pueden recibir notificaciones. Revisa las reglas de Firestore.", "error");
+
+                    const firstUnreadDoc = snapshot.docs[0];
+                    const message = firstUnreadDoc.data();
+                    
+                    state.currentMessageId = firstUnreadDoc.id; 
+
+                    DOMElements.broadcastModal.title.textContent = message.title || "Aviso del Administrador";
+                    DOMElements.broadcastModal.content.innerHTML = message.htmlContent; // Renderiza HTML
+                    DOMElements.broadcastModal.overlay.classList.add('active');
+
+                }, (error) => {
+                    console.error("Error en listener de mensajes:", error);
+                    if (error.code === 'permission-denied') {
+                        console.warn("Permiso denegado para leer mensajes. Asegúrate de que las reglas de Firestore estén correctas para 'userMessages'.");
                     }
-                    console.log("Pista: El error de 'broadcast' suele ser por reglas de Firestore. Asegúrate de que 'globalState/broadcast' sea legible por usuarios autenticados.");
                 });
             }
+
+            async function handleMarkMessageAsRead(messageId) {
+                if (!messageId || !state.currentUser || state.currentUser.type !== 'student') return;
+
+                const studentName = state.currentUser.data.nombre;
+                const messageRef = doc(db, "userMessages", studentName, "messages", messageId);
+
+                try {
+                    await updateDoc(messageRef, { read: true });
+                    state.currentMessageId = null; // Limpiar para que pueda entrar el próximo mensaje
+                } catch (e) {
+                    console.error("Error al marcar mensaje como leído:", e);
+                }
+            }
+            // ===============================================
 
             function setupAuctionRoomsListener() {
                 const roomsCollection = collection(db, "auctionRooms");
@@ -360,6 +584,25 @@
                     if (JSON.stringify(state.rooms) !== JSON.stringify(processedRooms)) {
                         const oldRooms = state.rooms;
                         state.rooms = processedRooms;
+
+                        // Lógica para sacar/banear estudiante
+                        if (state.currentUser && state.currentUser.type === 'student' && state.currentUser.joinedRoomId) {
+                            const myRoom = state.rooms.find(r => r.id === state.currentUser.joinedRoomId);
+                            
+                            const isKicked = !myRoom || (myRoom.participants && !myRoom.participants.includes(state.currentUser.data.nombre));
+                            const isBanned = myRoom && myRoom.bannedUsers && myRoom.bannedUsers.includes(state.currentUser.data.nombre);
+
+                            if (isKicked || isBanned) {
+                                if (myRoom && myRoom.status !== 'ended') {
+                                    showToast(isBanned ? "Has sido baneado de esta sala." : "Has sido eliminado de la sala.", "info");
+                                }
+                                state.currentUser.joinedRoomId = null;
+                                if (DOMElements.fullscreen.overlay.dataset.roomId === myRoom?.id) {
+                                    closeFullscreen();
+                                }
+                            }
+                        }
+                        
                         renderDashboard();
                         
                         const fsRoomId = DOMElements.fullscreen.overlay.dataset.roomId;
@@ -420,19 +663,13 @@
                     if (!studentNameSelect.value) {
                         error.textContent = 'Por favor, selecciona tu curso y nombre.';
                         error.classList.remove('hidden');
+                        toggleSpinner(loginBtn, false); // Detener spinner en error
                     } else {
                         state.currentUser = { type: 'student', data: JSON.parse(studentNameSelect.value), joinedRoomId: null };
-                        
-                        // ===== CAMBIO AQUÍ =====
-                        // Comprobar si hay un broadcast activo que el usuario no haya descartado
-                        if (state.currentBroadcast && state.currentBroadcast.timestamp > state.dismissedBroadcastTimestamp) {
-                            document.getElementById('broadcast-message-content').textContent = state.currentBroadcast.message;
-                            document.getElementById('broadcast-modal-overlay').classList.add('active');
-                        }
-                        // ===== FIN DEL CAMBIO =====
-
+                        setupUserMessagesListener(state.currentUser.data.nombre);
                         renderDashboard();
                         switchView('studentDashboard');
+                        toggleSpinner(loginBtn, false); // Detener spinner en éxito
                     }
                 } else {
                     if (teacherPassword.value === TEACHER_PASSWORD) {
@@ -443,11 +680,15 @@
                         error.textContent = 'Clave incorrecta.';
                         error.classList.remove('hidden');
                     }
+                    toggleSpinner(loginBtn, false); // Detener spinner en éxito/error de admin
                 }
-                toggleSpinner(loginBtn, false);
             }
 
             function handleLogout() {
+                if (state.messageListenerUnsubscribe) {
+                    state.messageListenerUnsubscribe();
+                    state.messageListenerUnsubscribe = null;
+                }
                 state.currentUser = null;
                 DOMElements.loginForm.teacherPassword.value = '';
                 switchView('roleSelectionView');
@@ -497,28 +738,47 @@
                     } else {
                         throw new Error("No se encontraron los datos del curso.");
                     }
-
-                } catch (error) {
+                } catch (error) { 
                     console.error("Error refreshing pinceles:", error);
                     showToast("No se pudo actualizar la cantidad de pinceles.", "error");
-                } finally {
+                } finally { 
                     icon.classList.remove('fa-spin');
                     refreshBtn.disabled = false;
                 }
-            }
-
+            } 
 
             async function handleCreateRoom(e) {
                 e.preventDefault();
-                const { name, item, minBid, duration, antiSnipe, submitBtn } = DOMElements.createRoomModal;
+                const { name, item, minBid, durationDays, durationHours, durationMins, accessGroup, antiSnipe, submitBtn } = DOMElements.createRoomModal;
                 toggleSpinner(submitBtn, true);
-                const durationMs = parseInt(duration.value, 10) * 60 * 1000;
+
+                const days = parseInt(durationDays.value) || 0;
+                const hours = parseInt(durationHours.value) || 0;
+                const mins = parseInt(durationMins.value) || 0;
+                const durationMs = (days * 24 * 60 * 60 * 1000) + (hours * 60 * 60 * 1000) + (mins * 60 * 1000);
+
+                if (durationMs <= 0) {
+                    showToast("La duración debe ser de al menos 1 minuto.", "error");
+                    toggleSpinner(submitBtn, false);
+                    return;
+                }
+
                 try {
                     await addDoc(collection(db, "auctionRooms"), {
-                        name: name.value.trim(), item: item.value.trim(), minBid: parseInt(minBid.value, 10),
-                        enableAntiSnipe: antiSnipe.checked, highestBid: parseInt(minBid.value, 10), highestBidder: 'Nadie',
-                        endTime: Date.now() + durationMs, originalDuration: durationMs,
-                        status: 'active', createdAt: Date.now(), bids: [], participants: [],
+                        name: name.value.trim(), 
+                        item: item.value.trim(), 
+                        minBid: parseInt(minBid.value, 10),
+                        enableAntiSnipe: antiSnipe.checked, 
+                        highestBid: parseInt(minBid.value, 10), 
+                        highestBidder: 'Nadie',
+                        endTime: Date.now() + durationMs, 
+                        originalDuration: durationMs,
+                        status: 'active', 
+                        createdAt: Date.now(), 
+                        bids: [], 
+                        participants: [],
+                        allowedGroup: accessGroup.value,
+                        bannedUsers: [],
                     });
                     toggleModal('createRoomModal', false);
                     showToast("Sala creada exitosamente.", "success");
@@ -539,7 +799,7 @@
                 if (newStatus === 'active') updates.endTime = Date.now() + (room.remainingTimeOnPause || 0);
                 if (newStatus === 'restarted') {
                     updates = { ...updates, status: 'active', endTime: Date.now() + room.originalDuration,
-                        highestBid: room.minBid, highestBidder: 'Nadie', bids: [] };
+                        highestBid: room.minBid, highestBidder: 'Nadie', bids: [], participants: [], bannedUsers: [] };
                 }
                 await updateDoc(roomRef, updates).catch(e => showToast("Error al actualizar la sala.", "error"));
             }
@@ -554,7 +814,42 @@
                 }
             }
 
-            // ===== NUEVO: Función para eliminar una puja específica (Admin) =====
+            async function handleKickParticipant(roomId, participantName) {
+                const roomRef = doc(db, "auctionRooms", roomId);
+                try {
+                    await updateDoc(roomRef, {
+                        participants: arrayRemove(participantName)
+                    });
+                    showToast(`'${participantName}' ha sido sacado de la sala.`, "success");
+                    // Refrescar el modal de gestión si está abierto
+                    if (DOMElements.manageRoomModal.overlay.classList.contains('active')) {
+                        showManageModal(roomId);
+                    }
+                } catch (e) {
+                    console.error("Error kicking participant:", e);
+                    showToast("Error al sacar al participante.", "error");
+                }
+            }
+
+            async function handleBanParticipant(roomId, participantName) {
+                const roomRef = doc(db, "auctionRooms", roomId);
+                try {
+                    await updateDoc(roomRef, {
+                        participants: arrayRemove(participantName),
+                        bannedUsers: arrayUnion(participantName)
+                    });
+                    showToast(`'${participantName}' ha sido BANEADO de la sala.`, "success");
+                    // Refrescar el modal de gestión si está abierto
+                    if (DOMElements.manageRoomModal.overlay.classList.contains('active')) {
+                        showManageModal(roomId);
+                    }
+                } catch (e) {
+                    console.error("Error banning participant:", e);
+                    showToast("Error al banear al participante.", "error");
+                }
+            }
+
+
             async function handleDeleteBid(roomId, bidToDelete) {
                 const roomRef = doc(db, "auctionRooms", roomId);
                 try {
@@ -565,27 +860,19 @@
                         const room = roomDoc.data();
                         const currentBids = room.bids || [];
                         
-                        // Filtramos para encontrar todas las pujas MENOS la que queremos eliminar
-                        // Comparamos por tiempo y postor para asegurar que es la puja única
                         const newBids = currentBids.filter(b => 
                             b.time !== bidToDelete.time || b.bidder !== bidToDelete.bidder
                         );
                         
-                        // Comprobamos si la puja eliminada era la puja más alta actual
                         const wasHighest = room.highestBid === bidToDelete.amount && room.highestBidder === bidToDelete.bidder;
                         
                         let updates = { bids: newBids };
 
                         if (wasHighest) {
-                            // Si la puja eliminada era la más alta, debemos recalcular
                             if (newBids.length === 0) {
-                                // No quedan pujas, reseteamos a la puja inicial
                                 updates.highestBid = room.minBid;
                                 updates.highestBidder = 'Nadie';
                             } else {
-                                // Hay pujas restantes. Encontramos la nueva más alta.
-                                // Ordenamos por cantidad (desc) y luego por tiempo (asc)
-                                // para encontrar la puja más alta que se hizo primero.
                                 const sortedNewBids = [...newBids].sort((a, b) => {
                                     if (a.amount !== b.amount) return b.amount - a.amount;
                                     return a.time - b.time; 
@@ -597,7 +884,6 @@
                             }
                         }
                         
-                        // Aplicamos la actualización (eliminar la puja y opcionalmente actualizar la más alta)
                         transaction.update(roomRef, updates);
                     });
                     showToast("Puja eliminada exitosamente.", "success");
@@ -698,6 +984,131 @@
                 }
             }
 
+            function showParticipantsModal(roomId) {
+                const room = state.rooms.find(r => r.id === roomId);
+                if (!room) return;
+
+                const userType = state.currentUser.type;
+                const participants = room.participants || [];
+                
+                DOMElements.participantsModal.title.textContent = `Miembros en ${room.name} (${participants.length})`;
+                
+                if (participants.length === 0) {
+                    DOMElements.participantsModal.list.innerHTML = `<p class="text-[var(--text-secondary)] text-center">No hay participantes unidos a esta sala.</p>`;
+                } else {
+                    DOMElements.participantsModal.list.innerHTML = participants.map(name => `
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-[var(--border-color)]">
+                            <p class="font-medium">${name}</p>
+                            ${userType === 'teacher' ? `
+                                <div class="flex gap-1">
+                                    <button class="btn !p-2 bg-yellow-100 text-yellow-700 hover:bg-yellow-200 kick-participant-btn"
+                                        title="Sacar a ${name} (podrá volver a unirse)"
+                                        data-roomid="${room.id}"
+                                        data-participant-name="${name}">
+                                        <i class="fas fa-user-slash"></i>
+                                    </button>
+                                    <button class="btn !p-2 bg-red-100 text-red-700 hover:bg-red-200 ban-participant-btn"
+                                        title="Banear a ${name} (no podrá volver a unirse)"
+                                        data-roomid="${room.id}"
+                                        data-participant-name="${name}">
+                                        <i class="fas fa-user-lock"></i>
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('');
+                }
+                
+                DOMElements.participantsModal.overlay.classList.add('active');
+            }
+
+            function showMessagingModal() {
+                const { targetGroup, targetUser } = DOMElements.messageModal;
+                if (!state.studentDataCache) {
+                    showToast("Datos de estudiantes no cargados. Intenta de nuevo.", "error");
+                    return;
+                }
+                
+                // Poblar grupos
+                targetGroup.innerHTML = '';
+                Object.keys(state.studentDataCache).forEach(courseName => {
+                    targetGroup.innerHTML += `<option value="${courseName}">${courseName}</option>`;
+                });
+
+                // Poblar usuarios
+                targetUser.innerHTML = '';
+                let allStudents = [];
+                Object.values(state.studentDataCache).forEach(course => {
+                    if(course.usuarios) {
+                        allStudents.push(...course.usuarios);
+                    }
+                });
+                // Ordenar alfabéticamente
+                allStudents.sort((a, b) => a.nombre.localeCompare(b.nombre));
+                allStudents.forEach(student => {
+                    targetUser.innerHTML += `<option value="${student.nombre}">${student.nombre} (${student.course})</option>`;
+                });
+                
+                // Ocultar selectores
+                document.getElementById('message-target-group-container').classList.add('hidden');
+                document.getElementById('message-target-user-container').classList.add('hidden');
+                
+                toggleModal('messageModal', true);
+            }
+
+            function showManageModal(roomId) {
+                const room = state.rooms.find(r => r.id === roomId);
+                if (!room) return;
+
+                const { title, controlsContainer, participantsList } = DOMElements.manageRoomModal;
+
+                title.textContent = `Gestionar: ${room.name}`;
+                
+                // 1. Poblar controles de sala (con iconos)
+                controlsContainer.innerHTML = `
+                    <button class="btn bg-yellow-500 text-white w-12 h-12 p-0 pause-resume-btn" 
+                            title="${room.status === 'active' ? 'Pausar' : 'Reanudar'}" data-roomid="${room.id}">
+                        ${room.status === 'active' ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>'}
+                    </button>
+                    <button class="btn bg-blue-600 text-white w-12 h-12 p-0 restart-btn" 
+                            title="Reiniciar Subasta" data-roomid="${room.id}">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                    <button class="btn bg-red-600 text-white w-12 h-12 p-0 end-btn" 
+                            title="Terminar Subasta" data-roomid="${room.id}">
+                        <i class="fas fa-flag-checkered"></i>
+                    </button>
+                `;
+
+                // 2. Poblar lista de participantes
+                const participants = room.participants || [];
+                if (participants.length === 0) {
+                    participantsList.innerHTML = `<p class="text-[var(--text-secondary)] text-center">No hay participantes unidos.</p>`;
+                } else {
+                    participantsList.innerHTML = participants.map(name => `
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-[var(--border-color)]">
+                            <p class="font-medium">${name}</p>
+                            <div class="flex gap-1">
+                                <button class="btn !p-2 bg-yellow-100 text-yellow-700 hover:bg-yellow-200 kick-participant-btn"
+                                    title="Sacar a ${name} (podrá volver a unirse)"
+                                    data-roomid="${room.id}"
+                                    data-participant-name="${name}">
+                                    <i class="fas fa-user-slash"></i>
+                                </button>
+                                <button class="btn !p-2 bg-red-100 text-red-700 hover:bg-red-200 ban-participant-btn"
+                                    title="Banear a ${name} (no podrá volver a unirse)"
+                                    data-roomid="${room.id}"
+                                    data-participant-name="${name}">
+                                    <i class="fas fa-user-lock"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                
+                DOMElements.manageRoomModal.overlay.classList.add('active');
+            }
+
 
             function renderDashboard() {
                 if (!state.currentUser) return;
@@ -705,7 +1116,7 @@
                 const container = DOMElements.views[dashboardId];
                 if (!container) return;
 
-                // ===== CAMBIO: Modificada la cabecera del admin para incluir el campo de broadcast =====
+                // CORRECCIÓN: Comentario movido fuera del template literal
                 const headerHTML = state.currentUser.type === 'student' ?
                     `<div class="flex justify-between items-center mb-4">
                         <h2 class="text-2xl font-bold">Salas de Subasta</h2>
@@ -722,9 +1133,8 @@
                     `<div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
                         <h2 class="text-2xl font-bold">Gestión de Subastas</h2>
                         <div class="flex items-center gap-2 w-full sm:w-auto">
-                            <input type="text" id="broadcast-input" placeholder="Mensaje global..." class="input-field !w-auto flex-1">
-                            <button id="send-broadcast-btn" class="btn btn-primary whitespace-nowrap !px-3" title="Enviar Mensaje Global">
-                                <i class="fas fa-bullhorn"></i><span class="hidden sm:inline ml-2">Enviar</span>
+                            <button id="open-message-modal-btn" class="btn btn-primary whitespace-nowrap !px-3" title="Enviar Mensaje">
+                                <i class="fas fa-envelope"></i><span class="hidden sm:inline ml-2">Enviar Mensaje</span>
                             </button>
                             <button id="create-room-btn" class="btn btn-accent whitespace-nowrap !px-3">
                                 <i class="fas fa-plus"></i><span class="hidden sm:inline ml-2">Crear Sala</span>
@@ -732,6 +1142,7 @@
                         </div>
                      </div>`;
                 
+                // CORRECCIÓN: Limpieza de timers al inicio de CADA render
                 Object.values(state.activeTimers).forEach(clearInterval);
                 state.activeTimers = {};
                 
@@ -742,7 +1153,15 @@
                     state.rooms.forEach(room => roomsHTML += createRoomHTML(state.currentUser.type, room));
                 }
                 container.innerHTML = headerHTML + roomsHTML + `</div>`;
-                state.rooms.filter(r => r.status !== 'ended').forEach(room => startCountdownTimer(room.id, `countdown-${room.id}`));
+                
+                // Iniciar timers SOLO para elementos visibles
+                state.rooms.filter(r => r.status !== 'ended').forEach(room => {
+                    const elementId = `countdown-${room.id}`;
+                    if (document.getElementById(elementId)) {
+                        startCountdownTimer(room.id, elementId);
+                    }
+                });
+                
                 applyVisualCooldowns();
             }
 
@@ -752,7 +1171,6 @@
                     if (userType === 'teacher') {
                         teacherControls = `<button title="Eliminar Sala" class="btn bg-red-600 hover:bg-red-700 text-white !p-2 rounded-md absolute top-2 right-2 delete-room-btn" data-roomid="${room.id}"><i class="fas fa-trash"></i></button>`;
                     }
-                    // <!-- CAMBIO SOLICITADO AQUÍ -->
                     return `<div class="relative flex flex-col sm:flex-row justify-center items-center text-center w-full p-6 my-2 bg-green-100 rounded-lg winner-announcement gap-4">
                                 ${teacherControls}
                                 <i class="fas fa-trophy text-3xl text-green-500"></i>
@@ -763,6 +1181,22 @@
                 if (userType === 'student') {
                     const hasJoined = state.currentUser.joinedRoomId === room.id;
                     const inAnotherRoom = state.currentUser.joinedRoomId && !hasJoined;
+                    
+                    // Comprobar baneo y grupo
+                    const isBanned = room.bannedUsers && room.bannedUsers.includes(state.currentUser.data.nombre);
+                    const isGroupAllowed = room.allowedGroup === 'all' || room.allowedGroup === state.currentUser.data.course;
+                    let joinButtonText = 'Unirse';
+                    let joinButtonDisabled = inAnotherRoom;
+                    if (isBanned) {
+                        joinButtonText = 'Baneado';
+                        joinButtonDisabled = true;
+                    } else if (!isGroupAllowed) {
+                        joinButtonText = 'Grupo no permitido';
+                        joinButtonDisabled = true;
+                    } else if (inAnotherRoom) {
+                        joinButtonText = 'En otra subasta';
+                    }
+
                     if (hasJoined) {
                         if (room.status === 'paused') {
                             actionHTML = `<div class="bg-yellow-100 p-4 rounded-lg text-center font-bold text-yellow-600">Pausada</div>`;
@@ -785,15 +1219,29 @@
                             </div>`;
                         }
                     } else {
-                        actionHTML = `<button class="btn btn-primary join-btn w-full" data-roomid="${room.id}" ${inAnotherRoom ? 'disabled' : ''}>${inAnotherRoom ? 'En otra subasta' : 'Unirse'}</button>`;
+                        actionHTML = `<button class="btn btn-primary join-btn w-full" data-roomid="${room.id}" ${joinButtonDisabled ? 'disabled' : ''}>${joinButtonText}</button>`;
                     }
-                } else {
-                     actionHTML = `<div class="flex items-center justify-center gap-2">
-                           <button title="${room.status === 'active' ? 'Pausar' : 'Reanudar'}" class="btn bg-yellow-500 hover:bg-yellow-600 text-white w-10 h-10 p-0 pause-resume-btn" data-roomid="${room.id}">${room.status === 'active' ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>'}</button>
-                           <button title="Reiniciar Subasta" class="btn bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 p-0 restart-btn" data-roomid="${room.id}"><i class="fas fa-redo"></i></button>
-                           <button title="Terminar Subasta" class="btn bg-red-600 hover:bg-red-700 text-white w-10 h-10 p-0 end-btn" data-roomid="${room.id}"><i class="fas fa-flag-checkered"></i></button>
+                } else { // Admin
+                     actionHTML = `
+                        <div class="flex items-center justify-end gap-2">
+                           <button title="Gestionar Sala y Participantes" class="btn btn-primary manage-room-btn !px-3" data-roomid="${room.id}">
+                                <i class="fas fa-cog"></i><span class="hidden sm:inline ml-2">Gestionar</span>
+                           </button>
                         </div>`;
                 }
+                
+                // Botón de miembros para estudiantes
+                let membersButton = '';
+                const participantsCount = room.participants?.length || 0;
+                if (userType === 'student') {
+                    membersButton = `
+                        <button class_fast="btn !p-2 !text-xs bg-gray-100 text-[var(--text-secondary)] participants-btn" data-roomid="${room.id}" title="Ver miembros">
+                            <i class="fas fa-users"></i>
+                            <span class="ml-1">${participantsCount}</span>
+                        </button>`;
+                }
+
+                // CORRECCIÓN: Organización de la 3a columna
                 return `<div class="flex flex-col sm:flex-row justify-between items-center w-full p-4 border-b border-[var(--border-color)] gap-4 hover:bg-black/5 transition-colors duration-200" id="room-${room.id}">
                             <div class="flex-1 text-center sm:text-left cursor-pointer room-item-clickable" data-roomid="${room.id}">
                                 <p class="font-bold text-xl">${room.name}</p><p class="font-semibold text-lg text-yellow-500">${room.item}</p>
@@ -802,83 +1250,127 @@
                                 <p class="text-sm text-[var(--text-secondary)]">PUJA ACTUAL</p><p class="text-4xl font-bold">${room.highestBid}</p>
                                 <p class="text-md text-[var(--text-secondary)]">Por: <span class="font-semibold text-[var(--text-primary)]">${room.highestBidder}</span></p>
                             </div>
-                            <div class="flex-1 flex flex-col items-center sm:items-end gap-2 w-full sm:w-auto">
-                                <div id="countdown-${room.id}" class="countdown-timer text-2xl font-bold ${room.status === 'paused' ? 'text-yellow-500' : 'text-green-600'}"></div>
-                                <div class="w-full max-w-[250px]">${actionHTML}</div>
+                            <div class="flex-1 flex flex-col items-center sm:items-stretch gap-2 w-full sm:w-auto">
+                                <div class="flex justify-between items-center gap-2">
+                                    <div id="countdown-${room.id}" class="countdown-timer text-2xl font-bold ${room.status === 'paused' ? 'text-yellow-500' : 'text-green-600'}"></div>
+                                    ${membersButton}
+                                </div>
+                                <div class="w-full">${actionHTML}</div>
                             </div></div>`;
             }
 
             function startCountdownTimer(roomId, elementId, onEndCallback) {
-                if (state.activeTimers[roomId]) clearInterval(state.activeTimers[roomId]);
+                // CORRECCIÓN: Usar elementId como clave para el timer
+                const timerKey = elementId;
+                
+                if (state.activeTimers[timerKey]) {
+                    clearInterval(state.activeTimers[timerKey]);
+                }
+                
                 const element = document.getElementById(elementId);
                 const room = state.rooms.find(r => r.id === roomId);
-                if (!element || !room || room.status === 'ended') return;
+                
+                if (!element || !room || room.status === 'ended') {
+                    if (element) element.textContent = "FINALIZADA";
+                    if(state.activeTimers[timerKey]) delete state.activeTimers[timerKey];
+                    return;
+                }
+                
                 const update = () => {
-                    let distance = room.status === 'paused' ? room.remainingTimeOnPause : room.endTime - Date.now();
-                    if (room.status === 'paused') {
+                    // Volver a buscar la sala, ya que el estado puede haber cambiado
+                    const currentRoom = state.rooms.find(r => r.id === roomId);
+                    if (!currentRoom) {
+                         clearInterval(state.activeTimers[timerKey]);
+                         delete state.activeTimers[timerKey];
+                         return;
+                    }
+                    
+                    let distance = currentRoom.status === 'paused' ? currentRoom.remainingTimeOnPause : currentRoom.endTime - Date.now();
+                    
+                    if (currentRoom.status === 'paused') {
                         element.textContent = "PAUSADA";
                         element.classList.add('text-yellow-500'); element.classList.remove('text-green-600', 'text-red-500');
                     } else if (distance < 0) {
                         element.textContent = 'FINALIZADA';
-                        clearInterval(state.activeTimers[roomId]);
-                        if (state.currentUser.type === 'teacher' && room.status !== 'ended') updateRoomStatus(roomId, 'ended');
+                        clearInterval(state.activeTimers[timerKey]);
+                        delete state.activeTimers[timerKey];
+                        if (state.currentUser.type === 'teacher' && currentRoom.status !== 'ended') {
+                            updateRoomStatus(roomId, 'ended');
+                        }
                         if (onEndCallback) onEndCallback();
                     } else {
                         const h = Math.floor(distance / 3600000), m = Math.floor((distance % 3600000) / 60000), s = Math.floor((distance % 60000) / 1000);
                         element.textContent = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
                         element.classList.remove('text-yellow-500');
-                        element.classList.toggle('text-red-500', distance < ANTI_SNIPE_WINDOW && room.enableAntiSnipe);
+                        element.classList.toggle('text-red-500', distance < ANTI_SNIPE_WINDOW && currentRoom.enableAntiSnipe);
                     }
                 };
+                
                 update();
-                state.activeTimers[roomId] = setInterval(update, 1000);
+                state.activeTimers[timerKey] = setInterval(update, 1000);
             }
 
             function renderFullscreenView(roomId) {
                 const { overlay, content } = DOMElements.fullscreen;
                 const room = state.rooms.find(r => r.id === roomId);
                 if (!room) return closeFullscreen();
+                
                 overlay.dataset.roomId = roomId;
-                // ===== CAMBIO: 'bidHistoryHTML' añadido aquí =====
-                let actionHTML = '', participantsHTML = '', bidHistoryHTML = '';
+                let actionHTML = '', controlsHTML = '', bidHistoryHTML = '';
 
                 if (room.status === 'ended') {
-                    // <!-- CAMBIO SOLICITADO AQUÍ -->
                     actionHTML = `<div class="w-full max-w-lg text-center font-bold p-4 bg-green-100 rounded-lg winner-announcement">
                         <p class="text-2xl text-green-800">¡Subasta Finalizada!</p>
                         <p class="text-4xl text-green-900 mt-2">Ganador: ${room.highestBidder} por ${room.highestBid} pinceles</p></div>`;
                 } else if (state.currentUser.type === 'student') {
+                    const participantsCount = room.participants?.length || 0;
+                    controlsHTML = `
+                        <button class="btn btn-primary participants-btn" data-roomid="${room.id}" title="Ver miembros">
+                            <i class="fas fa-users"></i>
+                            <span class="ml-2">${participantsCount}</span>
+                        </button>`;
+                    
                     if (state.currentUser.joinedRoomId === room.id) {
                         if (room.status === 'paused') {
                             actionHTML = `<div class="w-full max-w-sm text-center font-bold text-yellow-600 p-4 bg-yellow-100 rounded-md text-2xl">Subasta Pausada</div>`;
                         } else {
                             const nextBid = room.highestBid + 1;
                             const isCoolingDown = state.cooldownEndTimes[room.id] && Date.now() < state.cooldownEndTimes[room.id];
-                            actionHTML = `<div class="w-full max-w-sm"><div class="flex items-center gap-2">
-                                <input type="number" placeholder="Mín. ${nextBid}" min="${nextBid}" class="input-field text-xl p-4 fullscreen-bid-input w-full" data-roomid="${room.id}" value="${state.inputValues[room.id] || ''}">
-                                <button class="btn btn-primary text-xl p-4 fullscreen-bid-btn whitespace-nowrap" data-roomid="${room.id}" ${isCoolingDown ? 'disabled' : ''}>
+                            actionHTML = `<div class="w-full max-w-md space-y-2"><div class="flex items-center gap-2">
+                                <input type="number" placeholder="Mín. ${nextBid}" min="${nextBid}" class="input-field text-lg p-3 fullscreen-bid-input w-full" data-roomid="${room.id}" value="${state.inputValues[room.id] || ''}">
+                                <button class="btn btn-primary text-lg p-3 fullscreen-bid-btn whitespace-nowrap" data-roomid="${room.id}" ${isCoolingDown ? 'disabled' : ''}>
                                     <span>Pujar</span><i class="fas fa-spinner fa-spin hidden"></i>
                                 </button></div>
                                 <div class="flex gap-2 mt-2">
-                                    <button class="flex-1 btn !p-2 text-sm btn-primary quick-bid-btn" data-value="1" data-roomid="${room.id}">+1</button>
-                                    <button class="flex-1 btn !p-2 text-sm btn-primary quick-bid-btn" data-value="5" data-roomid="${room.id}">+5</button>
-                                    <button class="flex-1 btn !p-2 text-sm btn-primary quick-bid-btn" data-value="10" data-roomid="${room.id}">+10</button>
+                                    <button class="flex-1 btn !p-2 text-xs btn-primary quick-bid-btn" data-value="1" data-roomid="${room.id}">+1</button>
+                                    <button class="flex-1 btn !p-2 text-xs btn-primary quick-bid-btn" data-value="5" data-roomid="${room.id}">+5</button>
+                                    <button class="flex-1 btn !p-2 text-xs btn-primary quick-bid-btn" data-value="10" data-roomid="${room.id}">+10</button>
                                 </div><button class="text-sm text-red-500 mt-4 leave-btn" data-roomid="${room.id}">Salir de la subasta</button></div>`;
                         }
                     } else {
-                         actionHTML = `<button class="btn btn-primary join-btn" data-roomid="${room.id}">Unirse a la Subasta</button>`;
+                        const isBanned = room.bannedUsers && room.bannedUsers.includes(state.currentUser.data.nombre);
+                        const isGroupAllowed = room.allowedGroup === 'all' || room.allowedGroup === state.currentUser.data.course;
+                        let joinButtonText = 'Unirse a la Subasta';
+                        let joinButtonDisabled = false;
+                        if (isBanned) {
+                            joinButtonText = 'Baneado';
+                            joinButtonDisabled = true;
+                        } else if (!isGroupAllowed) {
+                            joinButtonText = 'Grupo no permitido';
+                            joinButtonDisabled = true;
+                        }
+                         actionHTML = `<button class="btn btn-primary join-btn text-lg p-4" data-roomid="${room.id}" ${joinButtonDisabled ? 'disabled' : ''}>${joinButtonText}</button>`;
                     }
                 } else { // Teacher view
-                    actionHTML = `<div class="flex items-center justify-center gap-2 w-full max-w-md mt-4">
-                        <button class="btn bg-yellow-500 text-white flex-1 pause-resume-btn" data-roomid="${room.id}">${room.status === 'active' ? '<i class="fas fa-pause mr-2"></i>Pausar' : '<i class="fas fa-play mr-2"></i>Reanudar'}</button>
-                        <button class="btn bg-blue-600 text-white flex-1 restart-btn" data-roomid="${room.id}"><i class="fas fa-redo mr-2"></i>Reiniciar</button>
-                        <button class="btn bg-red-600 text-white flex-1 end-btn" data-roomid="${room.id}"><i class="fas fa-flag-checkered mr-2"></i>Terminar</button></div>`;
+                    controlsHTML = `
+                        <button class="btn btn-primary manage-room-btn" data-roomid="${room.id}">
+                            <i class="fas fa-cog"></i><span class="ml-2">Gestionar Sala y Miembros</span>
+                        </button>`;
                     
-                    // ===== NUEVO: Generar historial de pujas para el admin =====
                     if (room.bids && room.bids.length > 0) {
-                        const sortedBids = [...room.bids].sort((a, b) => b.time - a.time); // Más nuevas primero
+                        const sortedBids = [...room.bids].sort((a, b) => b.time - a.time);
                         bidHistoryHTML = `
-                            <div class="w-full max-w-md mt-6 text-left">
+                            <div class="w-full max-w-md text-left">
                                 <h4 class="font-bold mb-2">Historial de Pujas (${sortedBids.length})</h4>
                                 <div class="max-h-48 overflow-y-auto border border-[var(--border-color)] rounded-lg p-2 bg-gray-50">
                                     ${sortedBids.map(bid => `
@@ -900,11 +1392,6 @@
                                 </div>
                             </div>`;
                     }
-                    // ===== FIN de historial de pujas =====
-
-                    if (room.participants?.length > 0) {
-                        participantsHTML = `<div class="mt-4 text-sm"><p class="font-bold">Participantes (${room.participants.length}):</p><p class="text-[var(--text-secondary)]">${room.participants.join(', ')}</p></div>`;
-                    }
                 }
                 
                 content.innerHTML = `
@@ -917,47 +1404,125 @@
                         <p class="text-7xl font-bold">${room.highestBid}</p>
                         <p class="text-2xl text-[var(--text-secondary)]">Por: <span class="font-semibold text-[var(--text-primary)]">${room.highestBidder}</span></p>
                     </div>
-                    ${actionHTML} ${participantsHTML}
-                    ${bidHistoryHTML || ''} <!-- CAMBIO: Añadido el historial de pujas aquí -->
-                `;
+                    
+                    <!-- Contenedor unificado para controles -->
+                    <div class="w-full max-w-md flex flex-col items-center space-y-4">
+                        ${controlsHTML}
+                        ${actionHTML}
+                        ${bidHistoryHTML}
+                    </div>`;
+                
+                const fsTimerId = `fullscreen-countdown-${room.id}`;
+                content.querySelector('.countdown-timer').id = fsTimerId; // Asignar ID único
                 
                 if (room.status !== 'ended') {
-                    startCountdownTimer(room.id, 'fullscreen-countdown', () => renderFullscreenView(roomId));
-                } else if (state.activeTimers[room.id]) {
-                    clearInterval(state.activeTimers[room.id]);
-                    document.getElementById('fullscreen-countdown').textContent = 'FINALIZADA';
+                    startCountdownTimer(room.id, fsTimerId, () => renderFullscreenView(roomId));
+                } else if (state.activeTimers[fsTimerId]) {
+                    clearInterval(state.activeTimers[fsTimerId]);
+                    delete state.activeTimers[fsTimerId];
+                    document.getElementById(fsTimerId).textContent = 'FINALIZADA';
                 }
                 overlay.classList.add('active');
                 applyVisualCooldowns();
             }
 
             function closeFullscreen() {
+                // CORRECCIÓN: Limpiar el timer de la vista fullscreen al cerrar
+                const fsRoomId = DOMElements.fullscreen.overlay.dataset.roomId;
+                if (fsRoomId) {
+                    const timerKey = `fullscreen-countdown-${fsRoomId}`;
+                    if (state.activeTimers[timerKey]) {
+                        clearInterval(state.activeTimers[timerKey]);
+                        delete state.activeTimers[timerKey];
+                    }
+                }
                 DOMElements.fullscreen.overlay.classList.remove('active');
                 delete DOMElements.fullscreen.overlay.dataset.roomId;
             }
 
             function setupInitialListeners() {
-                document.getElementById('select-student-btn').addEventListener('click', () => {
-                    DOMElements.loginForm.teacherFields.style.display = 'none';
-                    DOMElements.loginForm.studentFields.style.display = 'block';
-                    DOMElements.loginForm.title.textContent = 'Acceso de Estudiante';
-                    DOMElements.loginForm.loginBtn.querySelector('span').textContent = 'Acceder';
-                    loadStudentSelectionData();
-                    switchView('loginView');
-                });
-                document.getElementById('select-teacher-btn').addEventListener('click', () => {
-                    DOMElements.loginForm.teacherFields.style.display = 'block';
-                    DOMElements.loginForm.studentFields.style.display = 'none';
-                    DOMElements.loginForm.title.textContent = 'Acceso de Administrador';
-                    DOMElements.loginForm.loginBtn.querySelector('span').textContent = 'Acceder';
-                    switchView('loginView');
+                // CORRECCIÓN: Añadir 'if' para prevenir errores si el elemento no carga a tiempo
+                
+                if (document.getElementById('select-student-btn')) {
+                    document.getElementById('select-student-btn').addEventListener('click', () => {
+                        DOMElements.loginForm.teacherFields.style.display = 'none';
+                        DOMElements.loginForm.studentFields.style.display = 'block';
+                        DOMElements.loginForm.title.textContent = 'Acceso de Estudiante';
+                        DOMElements.loginForm.loginBtn.querySelector('span').textContent = 'Acceder';
+                        loadStudentSelectionData();
+                        switchView('loginView');
+                    });
+                } else { console.error("Error: select-student-btn no encontrado."); }
+
+                if (document.getElementById('select-teacher-btn')) {
+                    document.getElementById('select-teacher-btn').addEventListener('click', () => {
+                        DOMElements.loginForm.teacherFields.style.display = 'block';
+                        DOMElements.loginForm.studentFields.style.display = 'none';
+                        DOMElements.loginForm.title.textContent = 'Acceso de Administrador';
+                        DOMElements.loginForm.loginBtn.querySelector('span').textContent = 'Acceder';
+                        switchView('loginView');
+                    });
+                } else { console.error("Error: select-teacher-btn no encontrado."); }
+                
+                if (DOMElements.loginForm.loginBtn) {
+                    DOMElements.loginForm.loginBtn.addEventListener('click', handleLogin);
+                } else { console.error("Error: login-btn no encontrado."); }
+                
+                if (DOMElements.createRoomModal.form) {
+                    DOMElements.createRoomModal.form.addEventListener('submit', handleCreateRoom);
+                } else { console.error("Error: create-room-form no encontrado."); }
+                
+                if (document.getElementById('logout-btn')) {
+                    document.getElementById('logout-btn').addEventListener('click', handleLogout);
+                } else { console.error("Error: logout-btn no encontrado."); }
+                
+                if (document.querySelector('.back-to-role-selection')) {
+                    document.querySelector('.back-to-role-selection').addEventListener('click', () => switchView('roleSelectionView'));
+                } else { console.error("Error: back-to-role-selection no encontrado."); }
+
+                // --- Listeners de Modales ---
+                if (DOMElements.createRoomModal.closeBtn) DOMElements.createRoomModal.closeBtn.addEventListener('click', () => toggleModal('createRoomModal', false));
+                if (DOMElements.createRoomModal.overlay) DOMElements.createRoomModal.overlay.addEventListener('click', e => e.target === DOMElements.createRoomModal.overlay && toggleModal('createRoomModal', false));
+                
+                if (DOMElements.broadcastModal.closeBtn) DOMElements.broadcastModal.closeBtn.addEventListener('click', () => {
+                    DOMElements.broadcastModal.overlay.classList.remove('active');
+                    handleMarkMessageAsRead(state.currentMessageId);
                 });
                 
-                DOMElements.loginForm.loginBtn.addEventListener('click', handleLogin);
-                DOMElements.createRoomModal.form.addEventListener('submit', handleCreateRoom);
-                document.getElementById('logout-btn').addEventListener('click', handleLogout);
-                document.querySelector('.back-to-role-selection').addEventListener('click', () => switchView('roleSelectionView'));
+                if (DOMElements.participantsModal.closeBtn) DOMElements.participantsModal.closeBtn.addEventListener('click', () => toggleModal('participantsModal', false));
+                if (DOMElements.participantsModal.overlay) DOMElements.participantsModal.overlay.addEventListener('click', e => e.target === DOMElements.participantsModal.overlay && toggleModal('participantsModal', false));
+                
+                if (DOMElements.manageRoomModal.closeBtn) DOMElements.manageRoomModal.closeBtn.addEventListener('click', () => toggleModal('manageRoomModal', false));
+                if (DOMElements.manageRoomModal.overlay) DOMElements.manageRoomModal.overlay.addEventListener('click', e => e.target === DOMElements.manageRoomModal.overlay && toggleModal('manageRoomModal', false));
 
+                if (DOMElements.messageModal.closeBtn) DOMElements.messageModal.closeBtn.addEventListener('click', () => toggleModal('messageModal', false));
+                if (DOMElements.messageModal.overlay) DOMElements.messageModal.overlay.addEventListener('click', e => e.target === DOMElements.messageModal.overlay && toggleModal('messageModal', false));
+                
+                // --- Listeners del Modal de Mensajería (Admin) ---
+                if (DOMElements.messageModal.targetType) {
+                    DOMElements.messageModal.targetType.addEventListener('change', () => {
+                        const type = DOMElements.messageModal.targetType.value;
+                        document.getElementById('message-target-group-container').classList.toggle('hidden', type !== 'group');
+                        document.getElementById('message-target-user-container').classList.toggle('hidden', type !== 'user');
+                    });
+                } else { console.error("Error: message-target-type no encontrado."); }
+
+                if (DOMElements.messageModal.toolbar) {
+                    DOMElements.messageModal.toolbar.addEventListener('click', e => {
+                        const button = e.target.closest('button');
+                        if (!button) return;
+                        const command = button.dataset.command;
+                        const value = button.dataset.value || null;
+                        handleFormatMessage(command, value);
+                    });
+                } else { console.error("Error: message-modal-toolbar no encontrado."); }
+
+                if (DOMElements.messageModal.sendBtn) {
+                    DOMElements.messageModal.sendBtn.addEventListener('click', handleSendMessage);
+                } else { console.error("Error: message-modal-send-btn no encontrado."); }
+
+
+                // --- Listeners Globales (delegación de eventos) ---
                 document.body.addEventListener('input', e => {
                     const target = e.target;
                     if (target.matches('.bid-input, .fullscreen-bid-input')) {
@@ -971,30 +1536,19 @@
                 document.body.addEventListener('click', e => {
                     const target = e.target;
                     
-                    // ===== NUEVO: Handlers para broadcast =====
-                    if (target.closest('#send-broadcast-btn')) {
-                        const input = document.getElementById('broadcast-input');
-                        if (input && input.value.trim()) {
-                            handleSendBroadcast(input.value.trim());
-                            input.value = '';
+                    if (target.closest('#create-room-btn')) {
+                        // Poblar select de grupos al abrir
+                        const groupSelect = DOMElements.createRoomModal.accessGroup;
+                        groupSelect.innerHTML = '<option value="all">General (Todos los grupos)</option>';
+                        if (state.studentDataCache) {
+                            Object.keys(state.studentDataCache).forEach(courseName => {
+                                groupSelect.innerHTML += `<option value="${courseName}">Solo ${courseName}</option>`;
+                            });
                         }
-                        return;
+                        return toggleModal('createRoomModal', true);
                     }
-                    if (target.closest('#close-broadcast-modal')) {
-                        document.getElementById('broadcast-modal-overlay').classList.remove('active');
-                        
-                        // ===== CAMBIO AQUÍ =====
-                        // Guardar el timestamp del mensaje que se acaba de cerrar
-                        if (state.currentBroadcast) {
-                            state.dismissedBroadcastTimestamp = state.currentBroadcast.timestamp;
-                        }
-                        // ===== FIN DEL CAMBIO =====
-                        return;
-                    }
-                    // ===== FIN de Handlers para broadcast =====
-
-                    if (target.closest('#create-room-btn')) return toggleModal('createRoomModal', true);
-                    if (target.closest('#close-modal-btn') || target.id === 'create-room-modal') return toggleModal('createRoomModal', false);
+                    if (target.closest('#open-message-modal-btn')) return showMessagingModal();
+                    
                     if (target.closest('#close-fullscreen-btn') || target.id === 'fullscreen-room-overlay') return closeFullscreen();
                     if (target.closest('#refresh-pinceles-btn')) return handleRefreshPinceles();
 
@@ -1005,6 +1559,9 @@
                         const roomId = button.dataset.roomid;
                         if (button.matches('.join-btn')) return handleJoinLeaveRoom(roomId, 'join');
                         if (button.matches('.leave-btn')) return handleJoinLeaveRoom(roomId, 'leave');
+                        if (button.matches('.participants-btn')) return showParticipantsModal(roomId);
+                        if (button.matches('.manage-room-btn')) return showManageModal(roomId);
+                        
                         if (button.matches('.bid-btn, .fullscreen-bid-btn')) {
                             const container = button.closest('.card, #fullscreen-room-content');
                             const input = container.querySelector('.bid-input, .fullscreen-bid-input');
@@ -1023,32 +1580,34 @@
                                 state.inputValues[roomId] = input.value;
                             }
                         }
-
-                        // ===== NUEVO: Handler para eliminar puja =====
-                        if (button.matches('.delete-bid-btn')) {
-                            const bidData = button.dataset;
-                            // Comprobamos que todos los datos estén presentes
-                            if (bidData.bidTime && typeof bidData.bidBidder !== 'undefined' && bidData.bidAmount) {
-                                if (confirm('¿Estás seguro de que quieres eliminar esta puja? Esta acción no se puede deshacer y recalculará la puja más alta si es necesario.')) {
-                                    const bidObject = {
-                                        time: parseInt(bidData.bidTime, 10),
-                                        bidder: bidData.bidBidder,
-                                        amount: parseInt(bidData.bidAmount, 10)
-                                    };
-                                    handleDeleteBid(roomId, bidObject);
-                                }
-                            }
-                            return;
-                        }
-                        // ===== FIN de Handler para eliminar puja =====
-
+                        
+                        // Controles de sala (delegados)
                         if (button.matches('.end-btn')) return updateRoomStatus(roomId, 'ended');
                         if (button.matches('.pause-resume-btn')) {
                             const room = state.rooms.find(r => r.id === roomId);
                             if (room) updateRoomStatus(roomId, room.status === 'active' ? 'paused' : 'active');
                         }
                         if (button.matches('.restart-btn')) return updateRoomStatus(roomId, 'restarted');
+                        
+                        // Controles de admin
                         if (button.matches('.delete-room-btn')) return handleDeleteRoom(roomId);
+                        if (button.matches('.delete-bid-btn')) {
+                            const bidData = button.dataset;
+                            if (bidData.bidTime && typeof bidData.bidBidder !== 'undefined' && bidData.bidAmount) {
+                                const bidObject = {
+                                    time: parseInt(bidData.bidTime, 10),
+                                    bidder: bidData.bidBidder,
+                                    amount: parseInt(bidData.bidAmount, 10)
+                                };
+                                handleDeleteBid(roomId, bidObject);
+                            }
+                        }
+                        if (button.matches('.kick-participant-btn')) {
+                            return handleKickParticipant(roomId, button.dataset.participantName);
+                        }
+                        if (button.matches('.ban-participant-btn')) {
+                            return handleBanParticipant(roomId, button.dataset.participantName);
+                        }
                     } else if (clickableArea) {
                         renderFullscreenView(clickableArea.dataset.roomid);
                     }
