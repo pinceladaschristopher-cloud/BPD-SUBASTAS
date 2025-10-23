@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-CON-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Subastas - Pincel Dorado</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -597,11 +597,12 @@
                     if (userType === 'teacher') {
                         teacherControls = `<button title="Eliminar Sala" class="btn bg-red-600 hover:bg-red-700 text-white !p-2 rounded-md absolute top-2 right-2 delete-room-btn" data-roomid="${room.id}"><i class="fas fa-trash"></i></button>`;
                     }
+                    // <!-- CAMBIO SOLICITADO AQUÍ -->
                     return `<div class="relative flex flex-col sm:flex-row justify-center items-center text-center w-full p-6 my-2 bg-green-100 rounded-lg winner-announcement gap-4">
                                 ${teacherControls}
                                 <i class="fas fa-trophy text-3xl text-green-500"></i>
                                 <div><p class="text-lg text-green-800">Subasta para <span class="font-bold">${room.item}</span> finalizada.</p>
-                                <p class="text-2xl font-bold text-green-900">Ganador: ${room.highestBidder}!</p></div></div>`;
+                                <p class="text-2xl font-bold text-green-900">Ganador: ${room.highestBidder} por ${room.highestBid} pinceles!</p></div></div>`;
                 }
                 let actionHTML;
                 if (userType === 'student') {
@@ -686,9 +687,10 @@
                 let actionHTML = '', participantsHTML = '';
 
                 if (room.status === 'ended') {
+                    // <!-- CAMBIO SOLICITADO AQUÍ -->
                     actionHTML = `<div class="w-full max-w-lg text-center font-bold p-4 bg-green-100 rounded-lg winner-announcement">
                         <p class="text-2xl text-green-800">¡Subasta Finalizada!</p>
-                        <p class="text-4xl text-green-900 mt-2">Ganador: ${room.highestBidder}</p></div>`;
+                        <p class="text-4xl text-green-900 mt-2">Ganador: ${room.highestBidder} por ${room.highestBid} pinceles</p></div>`;
                 } else if (state.currentUser.type === 'student') {
                     if (state.currentUser.joinedRoomId === room.id) {
                         if (room.status === 'paused') {
