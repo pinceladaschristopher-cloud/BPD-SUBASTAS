@@ -1633,11 +1633,18 @@
                 let membersButton = '';
                 const participantsCount = room.participants?.length || 0;
                 if (userType === 'student') {
+                    // MODIFICADO: Se ha eliminado el botón de participantes de la vista de sala principal
+                    // para evitar que se superponga con el contador.
+                    // El botón para ver miembros sigue estando en la vista 'fullscreen'.
+                    membersButton = '';
+                    
+                    /* CÓDIGO ORIGINAL ELIMINADO:
                     membersButton = `
                         <button class="btn !p-1.5 !text-xs bg-gray-100 text-[var(--text-secondary)] participants-btn absolute bottom-0 right-0 mb-1 mr-1 rounded-full" data-roomid="${room.id}" title="Ver miembros">
                             <i class="fas fa-users"></i>
                             <span class="ml-1">${participantsCount}</span>
                         </button>`;
+                    */
                 }
 
                 // MODIFICADO: Nueva estructura Flex
@@ -1968,7 +1975,7 @@
                     DOMElements.header.inboxBtn.addEventListener('click', openInboxModal);
                 }
                 if (DOMElements.inboxModal.closeBtn) DOMElements.inboxModal.closeBtn.addEventListener('click', () => toggleModal('inboxModal', false));
-                if (DOMElements.inboxModal.overlay) DOMElements.inboxModal.overlay.addEventListener('click', e => e.target === DOMElements.inboxModal.overlay && toggleModal('inboxModal', false));
+                if (DOMElements.inboxModal.overlay) DOMElements.inboxModal.overlay.addEventListener('click', e => e.target === DOMElements.inboxModal.overlay && toggleModal('inboxModal',false));
                 
                 if (DOMElements.inboxModal.list) {
                     DOMElements.inboxModal.list.addEventListener('click', e => {
