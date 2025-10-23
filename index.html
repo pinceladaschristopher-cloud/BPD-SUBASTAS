@@ -70,6 +70,36 @@
         .message-editor-toolbar button:hover {
             background-color: var(--btn-primary-hover);
         }
+        
+        /* Ajuste compacto para salas */
+        .room-row {
+            display: grid;
+            grid-template-columns: 2fr 1.5fr 1.5fr 1fr; /* 4 columnas: Info, Puja, Tiempo, Acción */
+            gap: 1rem;
+            align-items: center;
+            padding: 0.75rem 1rem; /* p-3 */
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.2s;
+        }
+        .room-row:hover {
+            background-color: rgba(0,0,0,0.03);
+        }
+        @media (max-width: 768px) { /* md breakpoint */
+            .room-row {
+                grid-template-columns: 1fr; /* Apilado en móvil */
+                text-align: center;
+                gap: 0.75rem; /* Reducir gap en móvil */
+                padding: 1rem; /* p-4 en móvil */
+            }
+            .room-info, .room-bid, .room-timer, .room-action {
+                width: 100%;
+            }
+        }
+        .room-info { grid-column: 1 / 2; text-align: left; cursor: pointer; }
+        .room-bid { grid-column: 2 / 3; text-align: center; }
+        .room-timer { grid-column: 3 / 4; text-align: center; }
+        .room-action { grid-column: 4 / 5; text-align: right; display: flex; justify-content: flex-end; align-items: center; }
+        
     </style>
 </head>
 <body>
@@ -456,7 +486,6 @@
             async function handleSendMessage() {
                 const { targetType, targetGroup, targetUser, title, editor, sendBtn } = DOMElements.messageModal;
                 
-                // BUGFIX: Comprobar si los datos están cargados
                 if (!state.studentDataCache) {
                     showToast("Datos de estudiantes no cargados. Intenta de nuevo.", "error");
                     return;
@@ -762,7 +791,6 @@
                     return;
                 }
                 
-                // BUGFIX: Comprobar si los datos están cargados
                 if (!state.studentDataCache) {
                     showToast("Datos de estudiantes no cargados. No se puede crear la sala.", "error");
                     toggleSpinner(submitBtn, false);
@@ -1029,7 +1057,6 @@
             function showMessagingModal() {
                 const { targetGroup, targetUser } = DOMElements.messageModal;
                 
-                // BUGFIX: Comprobar si los datos están cargados
                 if (!state.studentDataCache) {
                     showToast("Datos de estudiantes no cargados. Intenta de nuevo.", "error");
                     return;
@@ -1146,7 +1173,7 @@
                 Object.values(state.activeTimers).forEach(clearInterval);
                 state.activeTimers = {};
                 
-                let roomsHTML = `<div class="flex flex-col gap-1">`;
+                let roomsHTML = `<div class="flex flex-col">`; // Quitado gap-1, el borde lo separa
                 if (state.rooms.length === 0) {
                     roomsHTML += `<div class="text-center text-[var(--text-secondary)] p-8 mt-4">No hay salas de subasta.</div>`;
                 } else {
@@ -1197,63 +1224,66 @@
 
                     if (hasJoined) {
                         if (room.status === 'paused') {
-                            actionHTML = `<div class="bg-yellow-100 p-4 rounded-lg text-center font-bold text-yellow-600">Pausada</div>`;
+                            actionHTML = `<div class="bg-yellow-100 p-3 rounded-lg text-center font-bold text-yellow-600 text-sm">Pausada</div>`;
                         } else {
                             const nextBid = room.highestBid + 1;
                             const isCoolingDown = state.cooldownEndTimes[room.id] && Date.now() < state.cooldownEndTimes[room.id];
-                            actionHTML = `<div class="bg-[var(--card-bg)] p-4 rounded-lg card">
-                                <div class="flex items-center gap-2">
-                                    <input type="number" placeholder="Mín. ${nextBid}" min="${nextBid}" class="input-field bid-input w-full" data-roomid="${room.id}" value="${state.inputValues[room.id] || ''}">
-                                    <button class="btn btn-primary bid-btn whitespace-nowrap !px-4" data-roomid="${room.id}" ${isCoolingDown ? 'disabled' : ''}>
+                            actionHTML = `<div class="bg-[var(--card-bg)] p-3 rounded-lg card">
+                                <div class="flex items-center gap-1">
+                                    <input type="number" placeholder="${nextBid}" min="${nextBid}" class="input-field bid-input w-full !p-2 text-sm" data-roomid="${room.id}" value="${state.inputValues[room.id] || ''}">
+                                    <button class="btn btn-primary bid-btn whitespace-nowrap !px-3 !py-2 text-sm" data-roomid="${room.id}" ${isCoolingDown ? 'disabled' : ''}>
                                         <span>Pujar</span><i class="fas fa-spinner fa-spin hidden"></i>
                                     </button>
                                 </div>
-                                <div class="flex gap-1 mt-2">
+                                <div class="flex gap-1 mt-1">
                                     <button class="flex-1 btn !p-1 text-xs btn-primary quick-bid-btn" data-value="1" data-roomid="${room.id}">+1</button>
                                     <button class="flex-1 btn !p-1 text-xs btn-primary quick-bid-btn" data-value="5" data-roomid="${room.id}">+5</button>
                                     <button class="flex-1 btn !p-1 text-xs btn-primary quick-bid-btn" data-value="10" data-roomid="${room.id}">+10</button>
                                 </div>
-                                <button class="text-xs text-red-500 mt-2 leave-btn" data-roomid="${room.id}">Salir</button>
+                                <button class="text-xs text-red-500 mt-2 hover:underline leave-btn" data-roomid="${room.id}">Salir</button>
                             </div>`;
                         }
                     } else {
-                        actionHTML = `<button class="btn btn-primary join-btn w-full" data-roomid="${room.id}" ${joinButtonDisabled ? 'disabled' : ''}>${joinButtonText}</button>`;
+                        actionHTML = `<button class="btn btn-primary join-btn w-full !py-2 text-sm" data-roomid="${room.id}" ${joinButtonDisabled ? 'disabled' : ''}>${joinButtonText}</button>`;
                     }
-                } else { // Admin
+                } else { // Admin - Botón de gestión solo icono
                      actionHTML = `
-                        <div class="flex items-center justify-end gap-2">
-                           <button title="Gestionar Sala y Participantes" class="btn btn-primary manage-room-btn !px-3" data-roomid="${room.id}">
-                                <i class="fas fa-cog"></i><span class="hidden sm:inline ml-2">Gestionar</span>
-                           </button>
-                        </div>`;
+                        <button title="Gestionar Sala y Participantes" 
+                                class="btn btn-primary manage-room-btn w-10 h-10 !p-0" 
+                                data-roomid="${room.id}">
+                            <i class="fas fa-cog"></i>
+                        </button>`;
                 }
                 
                 let membersButton = '';
                 const participantsCount = room.participants?.length || 0;
                 if (userType === 'student') {
                     membersButton = `
-                        <button class="btn !p-2 !text-xs bg-gray-100 text-[var(--text-secondary)] participants-btn" data-roomid="${room.id}" title="Ver miembros">
+                        <button class="btn !p-1.5 !text-xs bg-gray-100 text-[var(--text-secondary)] participants-btn absolute bottom-0 right-0 mb-1 mr-1 rounded-full" data-roomid="${room.id}" title="Ver miembros">
                             <i class="fas fa-users"></i>
                             <span class="ml-1">${participantsCount}</span>
                         </button>`;
                 }
 
-                // CAMBIO: Contenedor del contador centrado y texto más grande
-                return `<div class="flex flex-col sm:flex-row justify-between items-center w-full p-4 border-b border-[var(--border-color)] gap-4 hover:bg-black/5 transition-colors duration-200" id="room-${room.id}">
-                            <div class="flex-1 text-center sm:text-left cursor-pointer room-item-clickable" data-roomid="${room.id}">
-                                <p class="font-bold text-xl">${room.name}</p><p class="font-semibold text-lg text-yellow-500">${room.item}</p>
+                // CAMBIO: Estructura con Grid y elementos compactados
+                return `<div class="room-row" id="room-${room.id}">
+                            <div class="room-info" data-roomid="${room.id}">
+                                <p class="font-bold text-lg">${room.name}</p>
+                                <p class="font-semibold text-md text-yellow-500">${room.item}</p>
                             </div>
-                            <div class="flex-1 text-center my-4 sm:my-0">
-                                <p class="text-sm text-[var(--text-secondary)]">PUJA ACTUAL</p><p class="text-4xl font-bold">${room.highestBid}</p>
-                                <p class="text-md text-[var(--text-secondary)]">Por: <span class="font-semibold text-[var(--text-primary)]">${room.highestBidder}</span></p>
+                            <div class="room-bid">
+                                <p class="text-xs text-[var(--text-secondary)] uppercase">Puja Actual</p>
+                                <p class="text-3xl font-bold">${room.highestBid}</p>
+                                <p class="text-xs text-[var(--text-secondary)]">Por: <span class="font-medium text-[var(--text-primary)]">${room.highestBidder}</span></p>
                             </div>
-                            <div class="flex-1 flex flex-col items-center justify-center gap-2 w-full sm:w-auto">
-                                <div class="flex justify-center items-center gap-2 w-full">
-                                    <div id="countdown-${room.id}" class="countdown-timer text-4xl font-bold ${room.status === 'paused' ? 'text-yellow-500' : 'text-green-600'}"></div>
-                                    ${membersButton}
-                                </div>
-                                <div class="w-full">${actionHTML}</div>
-                            </div></div>`;
+                            <div class="room-timer relative"> 
+                                <div id="countdown-${room.id}" class="countdown-timer text-3xl font-bold ${room.status === 'paused' ? 'text-yellow-500' : 'text-green-600'}"></div>
+                                ${membersButton}
+                            </div>
+                            <div class="room-action">
+                                ${actionHTML}
+                            </div>
+                        </div>`;
             }
 
             function startCountdownTimer(roomId, elementId, onEndCallback) {
@@ -1411,10 +1441,13 @@
                 
                 if (room.status !== 'ended') {
                     startCountdownTimer(room.id, fsTimerId, () => renderFullscreenView(roomId));
-                } else if (state.activeTimers[fsTimerId]) {
-                    clearInterval(state.activeTimers[fsTimerId]);
-                    delete state.activeTimers[fsTimerId];
-                    document.getElementById(fsTimerId).textContent = 'FINALIZADA';
+                } else {
+                    const timerEl = document.getElementById(fsTimerId);
+                    if (timerEl) timerEl.textContent = 'FINALIZADA';
+                     if (state.activeTimers[fsTimerId]) {
+                        clearInterval(state.activeTimers[fsTimerId]);
+                        delete state.activeTimers[fsTimerId];
+                    }
                 }
                 overlay.classList.add('active');
                 applyVisualCooldowns();
@@ -1452,7 +1485,7 @@
                         DOMElements.loginForm.studentFields.style.display = 'none';
                         DOMElements.loginForm.title.textContent = 'Acceso de Administrador';
                         DOMElements.loginForm.loginBtn.querySelector('span').textContent = 'Acceder';
-                        loadStudentSelectionData(); // <--- ***** CAMBIO AQUÍ: Cargar datos para el admin *****
+                        loadStudentSelectionData(); 
                         switchView('loginView');
                     });
                 } else { console.error("Error: select-teacher-btn no encontrado."); }
@@ -1533,14 +1566,12 @@
                         const groupSelect = DOMElements.createRoomModal.accessGroup;
                         groupSelect.innerHTML = '<option value="all">General (Todos los grupos)</option>';
                         
-                        // BUGFIX: Comprobar si los datos están cargados
                         if (state.studentDataCache) {
                             Object.keys(state.studentDataCache).forEach(courseName => {
                                 groupSelect.innerHTML += `<option value="${courseName}">Solo ${courseName}</option>`;
                             });
                         } else {
                             console.warn("Datos de estudiantes no cargados al abrir modal de creación.");
-                            // No es necesario un toast aquí, la comprobación se hará al enviar
                         }
                         return toggleModal('createRoomModal', true);
                     }
@@ -1550,7 +1581,7 @@
                     if (target.closest('#refresh-pinceles-btn')) return handleRefreshPinceles();
 
                     const button = target.closest('button[data-roomid]');
-                    const clickableArea = target.closest('.room-item-clickable[data-roomid]');
+                    const clickableArea = target.closest('.room-info[data-roomid]'); // CAMBIO: Clickable area es room-info
 
                     if (button) {
                         const roomId = button.dataset.roomid;
@@ -1561,7 +1592,7 @@
                         
                         if (button.matches('.bid-btn, .fullscreen-bid-btn')) {
                             const container = button.closest('.card, #fullscreen-room-content');
-                            const input = container.querySelector('.bid-input, .fullscreen-bid-input');
+                            const input = container?.querySelector('.bid-input, .fullscreen-bid-input'); // Añadido optional chaining
                             if (!input || !input.value || isNaN(parseInt(input.value))) {
                                 return showToast("Por favor, introduce un valor de puja válido.", "error");
                             }
@@ -1569,7 +1600,7 @@
                         }
                         if (button.matches('.quick-bid-btn')) {
                             const container = button.closest('.card, #fullscreen-room-content');
-                            const input = container.querySelector('.bid-input, .fullscreen-bid-input');
+                            const input = container?.querySelector('.bid-input, .fullscreen-bid-input'); // Añadido optional chaining
                             const room = state.rooms.find(r => r.id === roomId);
                             if (room && input) {
                                 const currentVal = parseInt(input.value) || room.highestBid;
