@@ -137,12 +137,22 @@
         </div>
     </div>
 
-    <!-- El botón de cambio de tema ha sido eliminado -->
+    <!-- ===== NUEVO: Modal de Notificación Global ===== -->
+    <div id="broadcast-modal-overlay" class="modal-overlay">
+        <div class="modal-content card p-8 w-full max-w-lg text-center">
+            <h2 class="text-3xl font-bold text-yellow-500 mb-4">Aviso del Administrador</h2>
+            <p id="broadcast-message-content" class="text-xl mb-6"></p>
+            <button id="close-broadcast-modal" class="btn btn-primary w-full">Entendido</button>
+        </div>
+    </div>
+    <!-- ===== FIN de Modal de Notificación ===== -->
+
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, arrayUnion, deleteDoc, arrayRemove, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        // ===== CAMBIO: Añadido 'onAuthStateChanged' para gestionar el estado de autenticación =====
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, arrayUnion, deleteDoc, arrayRemove, runTransaction, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         document.addEventListener('DOMContentLoaded', () => {
             const API_URL = 'https://script.google.com/macros/s/AKfycbzUd8sFN2xAu0AyHgrPCwNVm7PZhnJi0zKAtGoxjOp9n-FsDfcvVWhg-kLhZXqXIIYRxQ/exec';
@@ -197,13 +207,33 @@
                     const app = initializeApp(firebaseConfig);
                     db = getFirestore(app);
                     auth = getAuth(app);
-                    await signInAnonymously(auth);
-                    setupAuctionRoomsListener();
-                    state.isFirebaseReady = true;
-                    document.querySelectorAll('#role-buttons button').forEach(btn => {
-                        btn.disabled = false;
-                        btn.innerHTML = btn.id.includes('student') ? 'Soy Estudiante' : 'Soy Maestro';
+                    
+                    // ===== CAMBIO: Movida la lógica del listener a onAuthStateChanged =====
+                    // Esto asegura que los listeners de Firestore solo se adjunten
+                    // DESPUÉS de que Firebase haya confirmado el estado de autenticación.
+                    onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            // Usuario está autenticado (anónimamente)
+                            if (!state.isFirebaseReady) { 
+                                // Solo ejecutar esto una vez
+                                console.log("Usuario autenticado, adjuntando listeners de Firestore...");
+                                setupAuctionRoomsListener();
+                                setupBroadcastListener();
+                                
+                                state.isFirebaseReady = true;
+                                document.querySelectorAll('#role-buttons button').forEach(btn => {
+                                    btn.disabled = false;
+                                    btn.innerHTML = btn.id.includes('student') ? 'Soy Estudiante' : 'Soy Maestro';
+                                });
+                            }
+                        }
+                        // Si no hay usuario, signInAnonymously (abajo) lo activará,
+                        // y este callback se volverá a ejecutar.
                     });
+
+                    // Iniciar el proceso de inicio de sesión anónimo
+                    await signInAnonymously(auth);
+                    
                 } catch (error) {
                     console.error("Firebase initialization failed:", error);
                     const errorDisplay = document.getElementById('init-error-display');
@@ -242,8 +272,6 @@
                     toast.addEventListener('transitionend', () => toast.remove());
                 }, 4000);
             }
-
-            // La función applyTheme ha sido eliminada
             
             function toggleSpinner(element, show) {
                 const text = element.querySelector('span');
@@ -264,6 +292,56 @@
                 const modal = DOMElements[modalName];
                 modal.overlay.classList.toggle('active', show);
                 if (!show && modalName === 'createRoomModal') modal.form.reset();
+            }
+
+            // ===== NUEVO: Función para enviar notificación global (Admin) =====
+            async function handleSendBroadcast(message) {
+                const broadcastRef = doc(db, "globalState", "broadcast");
+                try {
+                    await setDoc(broadcastRef, {
+                        message: message,
+                        timestamp: Date.now()
+                    });
+                    showToast("Mensaje global enviado.", "success");
+                } catch (e) {
+                    console.error("Error enviando broadcast:", e);
+                    // ===== CAMBIO: Mensaje de error más específico =====
+                    if (e.code === 'permission-denied') {
+                        showToast("Error: Permiso denegado. Revisa las reglas de Firestore para 'globalState/broadcast'.", "error");
+                    } else {
+                        showToast("No se pudo enviar el mensaje.", "error");
+                    }
+                }
+            }
+
+            // ===== NUEVO: Listener para notificaciones globales (Estudiantes) =====
+            function setupBroadcastListener() {
+                const broadcastRef = doc(db, "globalState", "broadcast");
+                let lastTimestamp = 0;
+                
+                onSnapshot(broadcastRef, (doc) => {
+                    if (doc.exists()) {
+                        const data = doc.data();
+                        // Nos aseguramos de no mostrar mensajes antiguos al cargar
+                        if (data.timestamp > lastTimestamp) {
+                            lastTimestamp = data.timestamp;
+                            
+                            // Solo mostramos el modal a los estudiantes
+                            if (state.currentUser && state.currentUser.type === 'student') {
+                                document.getElementById('broadcast-message-content').textContent = data.message;
+                                document.getElementById('broadcast-modal-overlay').classList.add('active');
+                            }
+                        }
+                    }
+                }, (error) => { // ===== CAMBIO: Añadido manejo de errores al listener =====
+                    console.error("Error en listener de Broadcast:", error.message);
+                    // ===== CAMBIO: Notificar al usuario que la función de broadcast fallará =====
+                    // Solo mostramos este error al admin, para no confundir a los estudiantes
+                    if (state.currentUser && state.currentUser.type === 'teacher') {
+                        showToast("Error: No se pueden recibir notificaciones. Revisa las reglas de Firestore.", "error");
+                    }
+                    console.log("Pista: El error de 'broadcast' suele ser por reglas de Firestore. Asegúrate de que 'globalState/broadcast' sea legible por usuarios autenticados.");
+                });
             }
 
             function setupAuctionRoomsListener() {
@@ -464,6 +542,59 @@
                 }
             }
 
+            // ===== NUEVO: Función para eliminar una puja específica (Admin) =====
+            async function handleDeleteBid(roomId, bidToDelete) {
+                const roomRef = doc(db, "auctionRooms", roomId);
+                try {
+                    await runTransaction(db, async (transaction) => {
+                        const roomDoc = await transaction.get(roomRef);
+                        if (!roomDoc.exists()) throw "La sala ya no existe.";
+                        
+                        const room = roomDoc.data();
+                        const currentBids = room.bids || [];
+                        
+                        // Filtramos para encontrar todas las pujas MENOS la que queremos eliminar
+                        // Comparamos por tiempo y postor para asegurar que es la puja única
+                        const newBids = currentBids.filter(b => 
+                            b.time !== bidToDelete.time || b.bidder !== bidToDelete.bidder
+                        );
+                        
+                        // Comprobamos si la puja eliminada era la puja más alta actual
+                        const wasHighest = room.highestBid === bidToDelete.amount && room.highestBidder === bidToDelete.bidder;
+                        
+                        let updates = { bids: newBids };
+
+                        if (wasHighest) {
+                            // Si la puja eliminada era la más alta, debemos recalcular
+                            if (newBids.length === 0) {
+                                // No quedan pujas, reseteamos a la puja inicial
+                                updates.highestBid = room.minBid;
+                                updates.highestBidder = 'Nadie';
+                            } else {
+                                // Hay pujas restantes. Encontramos la nueva más alta.
+                                // Ordenamos por cantidad (desc) y luego por tiempo (asc)
+                                // para encontrar la puja más alta que se hizo primero.
+                                const sortedNewBids = [...newBids].sort((a, b) => {
+                                    if (a.amount !== b.amount) return b.amount - a.amount;
+                                    return a.time - b.time; 
+                                });
+                                
+                                const newHighest = sortedNewBids[0];
+                                updates.highestBid = newHighest.amount;
+                                updates.highestBidder = newHighest.bidder;
+                            }
+                        }
+                        
+                        // Aplicamos la actualización (eliminar la puja y opcionalmente actualizar la más alta)
+                        transaction.update(roomRef, updates);
+                    });
+                    showToast("Puja eliminada exitosamente.", "success");
+                } catch (error) {
+                    console.error("Error deleting bid:", error);
+                    showToast(typeof error === 'string' ? error : "Error al eliminar la puja.", "error");
+                }
+            }
+
             async function handleJoinLeaveRoom(roomId, action) {
                 state.currentUser.joinedRoomId = (action === 'join') ? roomId : null;
                 const roomRef = doc(db, "auctionRooms", roomId);
@@ -562,6 +693,7 @@
                 const container = DOMElements.views[dashboardId];
                 if (!container) return;
 
+                // ===== CAMBIO: Modificada la cabecera del admin para incluir el campo de broadcast =====
                 const headerHTML = state.currentUser.type === 'student' ?
                     `<div class="flex justify-between items-center mb-4">
                         <h2 class="text-2xl font-bold">Salas de Subasta</h2>
@@ -575,7 +707,18 @@
                             </div>
                         </div>
                     </div>` :
-                    `<div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold">Gestión de Subastas</h2><button id="create-room-btn" class="btn btn-accent"><i class="fas fa-plus"></i>Crear Sala</button></div>`;
+                    `<div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                        <h2 class="text-2xl font-bold">Gestión de Subastas</h2>
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <input type="text" id="broadcast-input" placeholder="Mensaje global..." class="input-field !w-auto flex-1">
+                            <button id="send-broadcast-btn" class="btn btn-primary whitespace-nowrap !px-3" title="Enviar Mensaje Global">
+                                <i class="fas fa-bullhorn"></i><span class="hidden sm:inline ml-2">Enviar</span>
+                            </button>
+                            <button id="create-room-btn" class="btn btn-accent whitespace-nowrap !px-3">
+                                <i class="fas fa-plus"></i><span class="hidden sm:inline ml-2">Crear Sala</span>
+                            </button>
+                        </div>
+                     </div>`;
                 
                 Object.values(state.activeTimers).forEach(clearInterval);
                 state.activeTimers = {};
@@ -684,7 +827,8 @@
                 const room = state.rooms.find(r => r.id === roomId);
                 if (!room) return closeFullscreen();
                 overlay.dataset.roomId = roomId;
-                let actionHTML = '', participantsHTML = '';
+                // ===== CAMBIO: 'bidHistoryHTML' añadido aquí =====
+                let actionHTML = '', participantsHTML = '', bidHistoryHTML = '';
 
                 if (room.status === 'ended') {
                     // <!-- CAMBIO SOLICITADO AQUÍ -->
@@ -717,6 +861,35 @@
                         <button class="btn bg-yellow-500 text-white flex-1 pause-resume-btn" data-roomid="${room.id}">${room.status === 'active' ? '<i class="fas fa-pause mr-2"></i>Pausar' : '<i class="fas fa-play mr-2"></i>Reanudar'}</button>
                         <button class="btn bg-blue-600 text-white flex-1 restart-btn" data-roomid="${room.id}"><i class="fas fa-redo mr-2"></i>Reiniciar</button>
                         <button class="btn bg-red-600 text-white flex-1 end-btn" data-roomid="${room.id}"><i class="fas fa-flag-checkered mr-2"></i>Terminar</button></div>`;
+                    
+                    // ===== NUEVO: Generar historial de pujas para el admin =====
+                    if (room.bids && room.bids.length > 0) {
+                        const sortedBids = [...room.bids].sort((a, b) => b.time - a.time); // Más nuevas primero
+                        bidHistoryHTML = `
+                            <div class="w-full max-w-md mt-6 text-left">
+                                <h4 class="font-bold mb-2">Historial de Pujas (${sortedBids.length})</h4>
+                                <div class="max-h-48 overflow-y-auto border border-[var(--border-color)] rounded-lg p-2 bg-gray-50">
+                                    ${sortedBids.map(bid => `
+                                        <div class="flex justify-between items-center p-2 border-b border-[var(--border-color)] last:border-b-0">
+                                            <div>
+                                                <p class="font-semibold">${bid.bidder} - <span class="text-yellow-600">${bid.amount}</span></p>
+                                                <p class="text-xs text-[var(--text-secondary)]">${new Date(bid.time).toLocaleTimeString()}</p>
+                                            </div>
+                                            <button class="btn !p-2 bg-red-100 text-red-600 hover:bg-red-200 delete-bid-btn"
+                                                title="Eliminar esta puja"
+                                                data-roomid="${room.id}"
+                                                data-bid-time="${bid.time}"
+                                                data-bid-bidder="${bid.bidder}"
+                                                data-bid-amount="${bid.amount}">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>`;
+                    }
+                    // ===== FIN de historial de pujas =====
+
                     if (room.participants?.length > 0) {
                         participantsHTML = `<div class="mt-4 text-sm"><p class="font-bold">Participantes (${room.participants.length}):</p><p class="text-[var(--text-secondary)]">${room.participants.join(', ')}</p></div>`;
                     }
@@ -732,7 +905,9 @@
                         <p class="text-7xl font-bold">${room.highestBid}</p>
                         <p class="text-2xl text-[var(--text-secondary)]">Por: <span class="font-semibold text-[var(--text-primary)]">${room.highestBidder}</span></p>
                     </div>
-                    ${actionHTML} ${participantsHTML}`;
+                    ${actionHTML} ${participantsHTML}
+                    ${bidHistoryHTML || ''} <!-- CAMBIO: Añadido el historial de pujas aquí -->
+                `;
                 
                 if (room.status !== 'ended') {
                     startCountdownTimer(room.id, 'fullscreen-countdown', () => renderFullscreenView(roomId));
@@ -771,8 +946,6 @@
                 document.getElementById('logout-btn').addEventListener('click', handleLogout);
                 document.querySelector('.back-to-role-selection').addEventListener('click', () => switchView('roleSelectionView'));
 
-                // El listener del botón de tema ha sido eliminado
-
                 document.body.addEventListener('input', e => {
                     const target = e.target;
                     if (target.matches('.bid-input, .fullscreen-bid-input')) {
@@ -786,6 +959,21 @@
                 document.body.addEventListener('click', e => {
                     const target = e.target;
                     
+                    // ===== NUEVO: Handlers para broadcast =====
+                    if (target.closest('#send-broadcast-btn')) {
+                        const input = document.getElementById('broadcast-input');
+                        if (input && input.value.trim()) {
+                            handleSendBroadcast(input.value.trim());
+                            input.value = '';
+                        }
+                        return;
+                    }
+                    if (target.closest('#close-broadcast-modal')) {
+                        document.getElementById('broadcast-modal-overlay').classList.remove('active');
+                        return;
+                    }
+                    // ===== FIN de Handlers para broadcast =====
+
                     if (target.closest('#create-room-btn')) return toggleModal('createRoomModal', true);
                     if (target.closest('#close-modal-btn') || target.id === 'create-room-modal') return toggleModal('createRoomModal', false);
                     if (target.closest('#close-fullscreen-btn') || target.id === 'fullscreen-room-overlay') return closeFullscreen();
@@ -816,6 +1004,25 @@
                                 state.inputValues[roomId] = input.value;
                             }
                         }
+
+                        // ===== NUEVO: Handler para eliminar puja =====
+                        if (button.matches('.delete-bid-btn')) {
+                            const bidData = button.dataset;
+                            // Comprobamos que todos los datos estén presentes
+                            if (bidData.bidTime && typeof bidData.bidBidder !== 'undefined' && bidData.bidAmount) {
+                                if (confirm('¿Estás seguro de que quieres eliminar esta puja? Esta acción no se puede deshacer y recalculará la puja más alta si es necesario.')) {
+                                    const bidObject = {
+                                        time: parseInt(bidData.bidTime, 10),
+                                        bidder: bidData.bidBidder,
+                                        amount: parseInt(bidData.bidAmount, 10)
+                                    };
+                                    handleDeleteBid(roomId, bidObject);
+                                }
+                            }
+                            return;
+                        }
+                        // ===== FIN de Handler para eliminar puja =====
+
                         if (button.matches('.end-btn')) return updateRoomStatus(roomId, 'ended');
                         if (button.matches('.pause-resume-btn')) {
                             const room = state.rooms.find(r => r.id === roomId);
@@ -831,7 +1038,6 @@
                 document.addEventListener('keydown', (e) => e.key === 'Escape' && DOMElements.fullscreen.overlay.classList.contains('active') && closeFullscreen());
             }
 
-            // La lógica para establecer el tema inicial ha sido eliminada
             setupInitialListeners();
             initializeFirebase();
         });
