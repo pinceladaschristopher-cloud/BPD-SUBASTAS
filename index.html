@@ -164,6 +164,9 @@
             const state = {
                 currentUser: null, rooms: [], studentDataCache: null, isFirebaseReady: false, 
                 activeTimers: {}, inputValues: {}, cooldownEndTimes: {},
+                // ===== CAMBIO: Añadido estado para gestionar el broadcast persistente =====
+                currentBroadcast: null, // Almacenará el último mensaje: { message: "...", timestamp: 12345 }
+                dismissedBroadcastTimestamp: 0, // Almacena el timestamp del último mensaje CERRADO
             };
 
             const DOMElements = {
@@ -317,20 +320,20 @@
             // ===== NUEVO: Listener para notificaciones globales (Estudiantes) =====
             function setupBroadcastListener() {
                 const broadcastRef = doc(db, "globalState", "broadcast");
-                let lastTimestamp = 0;
                 
+                // ===== CAMBIO: Modificada la lógica del listener =====
                 onSnapshot(broadcastRef, (doc) => {
                     if (doc.exists()) {
                         const data = doc.data();
-                        // Nos aseguramos de no mostrar mensajes antiguos al cargar
-                        if (data.timestamp > lastTimestamp) {
-                            lastTimestamp = data.timestamp;
-                            
-                            // Solo mostramos el modal a los estudiantes
-                            if (state.currentUser && state.currentUser.type === 'student') {
-                                document.getElementById('broadcast-message-content').textContent = data.message;
-                                document.getElementById('broadcast-modal-overlay').classList.add('active');
-                            }
+                        const isNewMessage = !state.currentBroadcast || data.timestamp > state.currentBroadcast.timestamp;
+                        
+                        // Siempre actualiza el broadcast más reciente en el estado
+                        state.currentBroadcast = data; 
+
+                        // Si es un mensaje nuevo Y hay un estudiante logueado, muéstralo.
+                        if (isNewMessage && state.currentUser && state.currentUser.type === 'student') {
+                            document.getElementById('broadcast-message-content').textContent = data.message;
+                            document.getElementById('broadcast-modal-overlay').classList.add('active');
                         }
                     }
                 }, (error) => { // ===== CAMBIO: Añadido manejo de errores al listener =====
@@ -419,6 +422,15 @@
                         error.classList.remove('hidden');
                     } else {
                         state.currentUser = { type: 'student', data: JSON.parse(studentNameSelect.value), joinedRoomId: null };
+                        
+                        // ===== CAMBIO AQUÍ =====
+                        // Comprobar si hay un broadcast activo que el usuario no haya descartado
+                        if (state.currentBroadcast && state.currentBroadcast.timestamp > state.dismissedBroadcastTimestamp) {
+                            document.getElementById('broadcast-message-content').textContent = state.currentBroadcast.message;
+                            document.getElementById('broadcast-modal-overlay').classList.add('active');
+                        }
+                        // ===== FIN DEL CAMBIO =====
+
                         renderDashboard();
                         switchView('studentDashboard');
                     }
@@ -970,6 +982,13 @@
                     }
                     if (target.closest('#close-broadcast-modal')) {
                         document.getElementById('broadcast-modal-overlay').classList.remove('active');
+                        
+                        // ===== CAMBIO AQUÍ =====
+                        // Guardar el timestamp del mensaje que se acaba de cerrar
+                        if (state.currentBroadcast) {
+                            state.dismissedBroadcastTimestamp = state.currentBroadcast.timestamp;
+                        }
+                        // ===== FIN DEL CAMBIO =====
                         return;
                     }
                     // ===== FIN de Handlers para broadcast =====
