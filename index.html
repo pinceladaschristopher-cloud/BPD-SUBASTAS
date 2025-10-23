@@ -100,6 +100,85 @@
         .room-timer { grid-column: 3 / 4; text-align: center; }
         .room-action { grid-column: 4 / 5; text-align: right; display: flex; justify-content: flex-end; align-items: center; }
         
+        /* === NUEVOS ESTILOS: INBOX === */
+        #inbox-message-list .message-item {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #inbox-message-list .message-item:hover {
+            background-color: rgba(0,0,0,0.03);
+        }
+        #inbox-message-list .message-item.unread {
+            font-weight: 700;
+            background-color: rgba(255, 215, 0, 0.05);
+        }
+        #inbox-message-list .message-item.selected {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+        #inbox-message-body h1, #inbox-message-body h2, #inbox-message-body h3 { font-weight: 700; margin-top: 1em; margin-bottom: 0.5em; }
+        #inbox-message-body h1 { font-size: 1.5em; }
+        #inbox-message-body h2 { font-size: 1.25em; }
+        #inbox-message-body h3 { font-size: 1.1em; }
+        #inbox-message-body ul { list-style: disc; padding-left: 1.5rem; }
+        #inbox-message-body ol { list-style: decimal; padding-left: 1.5rem; }
+        #inbox-message-body p { margin-bottom: 1em; }
+
+        /* === NUEVOS ESTILOS: Multi-select === */
+        .multi-select-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--card-bg);
+        }
+        .multi-select-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background-color: #3b82f6; /* User */
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+        }
+        .multi-select-pill.group { background-color: #16a34a; }
+        .multi-select-pill.global { background-color: #f59e0b; }
+        .multi-select-pill button {
+            background: none; border: none; color: white;
+            opacity: 0.7; cursor: pointer;
+        }
+        .multi-select-pill button:hover { opacity: 1; }
+        .multi-select-input {
+            flex-grow: 1;
+            border: none;
+            outline: none;
+            padding: 0.25rem;
+            background-color: transparent;
+            color: var(--text-primary);
+        }
+        #message-suggestions {
+            position: absolute;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1001; /* Encima del modal */
+            width: 100%; /* Se ajusta al contenedor relativo */
+        }
+        #message-suggestions div {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+        }
+        #message-suggestions div:hover {
+            background-color: rgba(0,0,0,0.03);
+        }
+        
     </style>
 </head>
 <body>
@@ -145,6 +224,12 @@
         <header id="app-header" class="p-4 mb-6 flex justify-between items-center hidden border-b border-[var(--border-color)]">
             <div id="header-title" class="text-xl font-bold flex items-center gap-2"></div>
             <div class="flex items-center gap-4">
+                <!-- NUEVO: Botón de Bandeja de Entrada -->
+                <button id="inbox-btn" title="Bandeja de Entrada" class="btn bg-gray-100 text-[var(--text-primary)] !p-2.5 rounded-md hover:bg-gray-200 relative hidden">
+                    <i class="fas fa-envelope"></i>
+                    <span id="inbox-notification-badge" class="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center hidden"></span>
+                </button>
+                <!-- FIN NUEVO -->
                 <div id="user-info" class="text-right hidden sm:block">
                     <p class="font-semibold" id="user-name"></p>
                     <p class="text-sm text-[var(--text-secondary)]" id="user-detail"></p>
@@ -208,6 +293,7 @@
     </div>
 
     <!-- ===== MODAL DE NOTIFICACIÓN (REUTILIZADO PARA MENSAJES) ===== -->
+    <!-- Este modal ya no se usará para mensajes de estudiantes, pero se puede conservar para futuras notificaciones globales de "broadcast" si se desea -->
     <div id="broadcast-modal-overlay" class="modal-overlay">
         <div class="modal-content card p-8 w-full max-w-lg text-center">
             <h2 id="broadcast-modal-title" class="text-3xl font-bold text-yellow-500 mb-4">Aviso del Administrador</h2>
@@ -250,7 +336,7 @@
         </div>
     </div>
 
-    <!-- ===== MODAL DE MENSAJERÍA AVANZADA ===== -->
+    <!-- ===== MODAL DE MENSAJERÍA AVANZADA (ACTUALIZADO) ===== -->
     <div id="message-modal" class="modal-overlay">
         <div class="modal-content card p-0 w-full max-w-2xl">
             <div class="flex justify-between items-center p-6 border-b border-[var(--border-color)]">
@@ -258,35 +344,39 @@
                 <button id="message-modal-close-btn" class="text-gray-400 hover:text-gray-700 text-2xl">&times;</button>
             </div>
             <div class="p-6 space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="message-target-type" class="block text-sm font-medium mb-1">Enviar a:</label>
-                        <select id="message-target-type" class="input-field">
-                            <option value="global">Global (Todos los estudiantes)</option>
-                            <option value="group">Grupo Específico</option>
-                            <option value="user">Usuario Específico</option>
-                        </select>
+                
+                <div>
+                    <label for="message-modal-title" class="block text-sm font-medium mb-1">Asunto:</label>
+                    <input type="text" id="message-modal-title" placeholder="Asunto del mensaje" class="input-field">
+                </div>
+
+                <!-- NUEVO: Campo de destinatarios Multi-Select -->
+                <div class="relative">
+                    <label for="multi-select-input" class="block text-sm font-medium mb-1">Destinatarios:</label>
+                    <div id="multi-select-container" class="multi-select-container">
+                        <!-- Las "pills" de destinatarios se añadirán aquí -->
+                        <input type="text" id="multi-select-input" class="multi-select-input" placeholder="Buscar grupos, usuarios o 'Global'...">
                     </div>
-                    <div>
-                        <label for="message-modal-title" class="block text-sm font-medium mb-1">Asunto:</label>
-                        <input type="text" id="message-modal-title" placeholder="Asunto del mensaje" class="input-field">
-                    </div>
+                    <!-- Contenedor de Sugerencias -->
+                    <div id="message-suggestions" class="hidden"></div>
                 </div>
-                <div id="message-target-group-container" class="hidden">
-                    <label for="message-target-group" class="block text-sm font-medium mb-1">Seleccionar Grupo:</label>
-                    <select id="message-target-group" class="input-field"></select>
-                </div>
-                <div id="message-target-user-container" class="hidden">
-                    <label for="message-target-user" class="block text-sm font-medium mb-1">Seleccionar Usuario:</label>
-                    <select id="message-target-user" class="input-field"></select>
-                </div>
+                <!-- FIN NUEVO -->
+
+                <!-- ANTIGUOS SELECTORES (ELIMINADOS) -->
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Mensaje:</label>
-                    <div id="message-modal-toolbar" class="message-editor-toolbar flex items-center gap-1 p-2 bg-gray-100 rounded-t-lg border border-b-0 border-[var(--border-color)]">
+                    <!-- TOOLBAR MEJORADA -->
+                    <div id="message-modal-toolbar" class="message-editor-toolbar flex items-center flex-wrap gap-1 p-2 bg-gray-100 rounded-t-lg border border-b-0 border-[var(--border-color)]">
                         <button type="button" data-command="bold" title="Negrita"><i class="fas fa-bold"></i></button>
                         <button type="button" data-command="italic" title="Cursiva"><i class="fas fa-italic"></i></button>
+                        <button type="button" data-command="underline" title="Subrayado"><i class="fas fa-underline"></i></button>
+                        <button type="button" data-command="strikethrough" title="Tachado"><i class="fas fa-strikethrough"></i></button>
                         <button type="button" data-command="insertUnorderedList" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+                        <button type="button" data-command="insertOrderedList" title="Lista Numerada"><i class="fas fa-list-ol"></i></button>
+                        <button type="button" data-command="justifyLeft" title="Alinear Izquierda"><i class="fas fa-align-left"></i></button>
+                        <button type="button" data-command="justifyCenter" title="Alinear Centro"><i class="fas fa-align-center"></i></button>
+                        <button type="button" data-command="justifyRight" title="Alinear Derecha"><i class="fas fa-align-right"></i></button>
                         <button type="button" data-command="formatBlock" data-value="H3" title="Título"><b>H3</b></button>
                         <button type="button" data-command="formatBlock" data-value="P" title="Párrafo">P</button>
                     </div>
@@ -300,12 +390,47 @@
             </div>
         </div>
     </div>
+    
+    <!-- ===== NUEVO: MODAL DE BANDEJA DE ENTRADA ===== -->
+    <div id="inbox-modal" class="modal-overlay">
+        <div class="modal-content card p-0 w-full max-w-3xl flex flex-col" style="height: 70vh;">
+            <div class="flex justify-between items-center p-6 border-b border-[var(--border-color)]">
+                <h2 class="text-2xl font-bold">Bandeja de Entrada</h2>
+                <button id="inbox-modal-close-btn" class="text-gray-400 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div class="flex-1 flex overflow-hidden">
+                <!-- Lista de Mensajes -->
+                <div id="inbox-message-list" class="w-1/3 border-r border-[var(--border-color)] overflow-y-auto">
+                    <!-- Los mensajes se inyectarán aquí -->
+                </div>
+                <!-- Vista del Mensaje -->
+                <div class="w-2/3 flex flex-col">
+                    <div id="inbox-message-view-content" class="flex-1 p-6 overflow-y-auto">
+                        <div id="inbox-placeholder" class="text-center text-gray-500 h-full flex flex-col justify-center items-center">
+                            <i class="fas fa-envelope-open-text fa-3x mb-4"></i>
+                            <p>Selecciona un mensaje para leerlo.</p>
+                        </div>
+                        <div id="inbox-content-area" class="hidden">
+                            <h3 id="inbox-message-title" class="text-xl font-bold mb-4"></h3>
+                            <p id="inbox-message-timestamp" class="text-sm text-gray-500 mb-4"></p>
+                            <div id="inbox-message-body" class=""></div>
+                        </div>
+                    </div>
+                    <div id="inbox-delete-footer" class="p-4 bg-gray-50 border-t border-[var(--border-color)] text-right hidden">
+                        <button id="inbox-delete-btn" class="btn bg-red-100 text-red-700 hover:bg-red-200 !px-3 !py-2 text-sm">
+                            <i class="fas fa-trash-alt"></i> Eliminar Mensaje
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, arrayUnion, deleteDoc, arrayRemove, runTransaction, query, where, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, arrayUnion, deleteDoc, arrayRemove, runTransaction, query, where, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         document.addEventListener('DOMContentLoaded', () => {
             const API_URL = 'https://script.google.com/macros/s/AKfycbzUd8sFN2xAu0AyHgrPCwNVm7PZhnJi0zKAtGoxjOp9n-FsDfcvVWhg-kLhZXqXIIYRxQ/exec';
@@ -318,7 +443,9 @@
                 currentUser: null, rooms: [], studentDataCache: null, isFirebaseReady: false, 
                 activeTimers: {}, inputValues: {}, cooldownEndTimes: {},
                 messageListenerUnsubscribe: null, 
-                currentMessageId: null, 
+                userMessages: [], // Almacena todos los mensajes del inbox
+                selectedMessageId: null, // ID del mensaje visto en el inbox
+                messageRecipients: [], // Para el modal de envío (admin)
             };
 
             const DOMElements = {
@@ -332,6 +459,9 @@
                 header: {
                     container: document.getElementById('app-header'), title: document.getElementById('header-title'),
                     userName: document.getElementById('user-name'), userDetail: document.getElementById('user-detail'),
+                    // Nuevos elementos de Inbox
+                    inboxBtn: document.getElementById('inbox-btn'),
+                    inboxBadge: document.getElementById('inbox-notification-badge'),
                 },
                 loginForm: {
                     title: document.getElementById('login-title'), studentFields: document.getElementById('student-fields'),
@@ -354,7 +484,7 @@
                 fullscreen: {
                     overlay: document.getElementById('fullscreen-room-overlay'), content: document.getElementById('fullscreen-room-content'),
                 },
-                broadcastModal: { // Para mostrar mensajes
+                broadcastModal: { // Para mostrar mensajes (Pop-up antiguo)
                     overlay: document.getElementById('broadcast-modal-overlay'),
                     title: document.getElementById('broadcast-modal-title'),
                     content: document.getElementById('broadcast-message-content'),
@@ -375,14 +505,29 @@
                 },
                 messageModal: { // Para enviar mensajes (admin)
                     overlay: document.getElementById('message-modal'),
-                    targetType: document.getElementById('message-target-type'),
-                    targetGroup: document.getElementById('message-target-group'),
-                    targetUser: document.getElementById('message-target-user'),
+                    // targetType, targetGroup, targetUser (ELIMINADOS de aquí)
                     title: document.getElementById('message-modal-title'),
                     editor: document.getElementById('message-modal-editor'),
                     toolbar: document.getElementById('message-modal-toolbar'),
                     sendBtn: document.getElementById('message-modal-send-btn'),
-                    closeBtn: document.getElementById('message-modal-close-btn')
+                    closeBtn: document.getElementById('message-modal-close-btn'),
+                    // Nuevos elementos para multi-select
+                    recipientContainer: document.getElementById('multi-select-container'),
+                    recipientInput: document.getElementById('multi-select-input'),
+                    suggestionsContainer: document.getElementById('message-suggestions'),
+                },
+                inboxModal: {
+                    overlay: document.getElementById('inbox-modal'),
+                    closeBtn: document.getElementById('inbox-modal-close-btn'),
+                    list: document.getElementById('inbox-message-list'),
+                    viewContent: document.getElementById('inbox-message-view-content'),
+                    placeholder: document.getElementById('inbox-placeholder'),
+                    contentArea: document.getElementById('inbox-content-area'),
+                    title: document.getElementById('inbox-message-title'),
+                    timestamp: document.getElementById('inbox-message-timestamp'),
+                    body: document.getElementById('inbox-message-body'),
+                    deleteFooter: document.getElementById('inbox-delete-footer'),
+                    deleteBtn: document.getElementById('inbox-delete-btn'),
                 },
                 toastContainer: document.getElementById('toast-container'),
             };
@@ -476,27 +621,171 @@
                 if (!show && modalName === 'createRoomModal') modal.form.reset();
             }
 
-            // ===== FUNCIONES DE MENSAJERÍA AVANZADA =====
+            // ===== FUNCIONES DE MENSAJERÍA AVANZADA (ADMIN) =====
 
             function handleFormatMessage(command, value = null) {
                 document.execCommand(command, false, value);
                 DOMElements.messageModal.editor.focus();
             }
+            
+            // NUEVO: Funciones para el Multi-Select de Mensajería
+            
+            function setupMessageMultiSelect() {
+                const { recipientContainer, recipientInput, suggestionsContainer } = DOMElements.messageModal;
+                
+                // Limpiar estado al abrir
+                state.messageRecipients = [];
+                renderMessageRecipients();
 
+                recipientInput.onkeyup = (e) => {
+                    if (e.key === 'Enter' && suggestionsContainer.firstChild) {
+                        e.preventDefault();
+                        suggestionsContainer.firstChild.click();
+                    } else if (e.key === 'Backspace' && recipientInput.value === '' && state.messageRecipients.length > 0) {
+                        state.messageRecipients.pop(); // Eliminar el último
+                        renderMessageRecipients();
+                    } else {
+                        renderMessageSuggestions(e.target.value);
+                    }
+                };
+                
+                recipientInput.onfocus = () => {
+                     renderMessageSuggestions(recipientInput.value);
+                };
+
+                // Ocultar sugerencias si se hace clic fuera (manejador global en setupInitialListeners)
+                
+                suggestionsContainer.onclick = (e) => {
+                    const suggestionEl = e.target.closest('[data-type]');
+                    if (suggestionEl) {
+                        const { type, value, name } = suggestionEl.dataset;
+                        addMessageRecipient({ type, value, name });
+                        recipientInput.value = '';
+                        suggestionsContainer.classList.add('hidden');
+                        recipientInput.focus();
+                    }
+                };
+                
+                recipientContainer.onclick = (e) => {
+                    const pillButton = e.target.closest('.remove-recipient-btn');
+                    if (pillButton) {
+                        const { type, value } = pillButton.dataset;
+                        state.messageRecipients = state.messageRecipients.filter(r => 
+                            !(r.type === type && r.value === value)
+                        );
+                        renderMessageRecipients();
+                    } else if (e.target.id === 'multi-select-container') {
+                        recipientInput.focus();
+                    }
+                };
+            }
+
+            function renderMessageSuggestions(query) {
+                const { suggestionsContainer } = DOMElements.messageModal;
+                query = query.toLowerCase().trim();
+                
+                if (!state.studentDataCache) {
+                    suggestionsContainer.innerHTML = `<div class="p-3 text-gray-500">Error: Datos de estudiantes no cargados.</div>`;
+                    suggestionsContainer.classList.remove('hidden');
+                    return;
+                }
+
+                let suggestionsHTML = '';
+
+                // 1. Sugerencia Global
+                if ('global'.includes(query) && !state.messageRecipients.some(r => r.type === 'global')) {
+                    suggestionsHTML += `<div data-type="global" data-value="all" data-name="Global (Todos)">
+                        <span class="font-bold text-yellow-600">Global (Todos los estudiantes)</span>
+                    </div>`;
+                }
+
+                // 2. Sugerencias de Grupos
+                Object.keys(state.studentDataCache).forEach(groupName => {
+                    if (groupName.toLowerCase().includes(query) && !state.messageRecipients.some(r => r.type === 'group' && r.value === groupName)) {
+                        suggestionsHTML += `<div data-type="group" data-value="${groupName}" data-name="Grupo: ${groupName}">
+                            <span class="font-bold text-green-600">Grupo:</span> ${groupName}
+                        </div>`;
+                    }
+                });
+
+                // 3. Sugerencias de Usuarios
+                let userMatches = 0;
+                const maxUserMatches = 10;
+                Object.values(state.studentDataCache).forEach(course => {
+                    if (course.usuarios) {
+                        course.usuarios.forEach(user => {
+                            if (userMatches < maxUserMatches && user.nombre.toLowerCase().includes(query) && !state.messageRecipients.some(r => r.type === 'user' && r.value === user.nombre)) {
+                                suggestionsHTML += `<div data-type="user" data-value="${user.nombre}" data-name="${user.nombre}">
+                                    <span class="font-bold text-blue-600">Usuario:</span> ${user.nombre} (${user.course})
+                                </div>`;
+                                userMatches++;
+                            }
+                        });
+                    }
+                });
+                
+                if (suggestionsHTML) {
+                    suggestionsContainer.innerHTML = suggestionsHTML;
+                    suggestionsContainer.classList.remove('hidden');
+                } else {
+                    suggestionsContainer.classList.add('hidden');
+                }
+            }
+
+            function addMessageRecipient(recipient) {
+                // Evitar duplicados
+                if (!state.messageRecipients.some(r => r.type === recipient.type && r.value === recipient.value)) {
+                    // Si se añade 'Global', eliminar todos los demás
+                    if (recipient.type === 'global') {
+                        state.messageRecipients = [recipient];
+                    } else {
+                        // Eliminar 'Global' si se añade uno específico
+                        state.messageRecipients = state.messageRecipients.filter(r => r.type !== 'global');
+                        state.messageRecipients.push(recipient);
+                    }
+                    renderMessageRecipients();
+                }
+            }
+
+            function renderMessageRecipients() {
+                const { recipientContainer, recipientInput } = DOMElements.messageModal;
+                // Eliminar pills antiguas
+                recipientContainer.querySelectorAll('.multi-select-pill').forEach(pill => pill.remove());
+                
+                // Añadir pills nuevas
+                state.messageRecipients.forEach(recipient => {
+                    const pill = document.createElement('span');
+                    pill.className = `multi-select-pill ${recipient.type}`; // 'global', 'group', 'user'
+                    pill.innerHTML = `
+                        ${recipient.name}
+                        <button type="button" class="remove-recipient-btn" data-type="${recipient.type}" data-value="${recipient.value}">&times;</button>
+                    `;
+                    recipientContainer.insertBefore(pill, recipientInput);
+                });
+            }
+
+
+            // ACTUALIZADO: `handleSendMessage` ahora usa `state.messageRecipients`
             async function handleSendMessage() {
-                const { targetType, targetGroup, targetUser, title, editor, sendBtn } = DOMElements.messageModal;
+                const { title, editor, sendBtn } = DOMElements.messageModal;
                 
                 if (!state.studentDataCache) {
                     showToast("Datos de estudiantes no cargados. Intenta de nuevo.", "error");
                     return;
                 }
-
-                const type = targetType.value;
+                
+                // Nueva lógica de destinatarios
+                const recipients = state.messageRecipients;
                 const htmlContent = editor.innerHTML;
                 const messageTitle = title.value.trim() || "Nuevo Mensaje";
 
                 if (htmlContent.trim().length === 0) {
                     showToast("El contenido del mensaje no puede estar vacío.", "error");
+                    return;
+                }
+                
+                if (recipients.length === 0) {
+                    showToast("Debes seleccionar al menos un destinatario.", "error");
                     return;
                 }
 
@@ -509,29 +798,33 @@
                         timestamp: Date.now(),
                         read: false
                     };
-
-                    let targetStudents = [];
-
-                    if (type === 'global') {
-                        Object.values(state.studentDataCache).forEach(course => {
-                            if (course.usuarios) {
-                                targetStudents.push(...course.usuarios.map(u => u.nombre));
+                    
+                    // Construir lista única de estudiantes
+                    const targetStudentNames = new Set();
+                    
+                    for (const recipient of recipients) {
+                        if (recipient.type === 'global') {
+                            Object.values(state.studentDataCache).forEach(course => {
+                                if (course.usuarios) {
+                                    course.usuarios.forEach(u => targetStudentNames.add(u.nombre));
+                                }
+                            });
+                            break; // Si es global, no necesitamos procesar más
+                        } else if (recipient.type === 'group') {
+                            const groupName = recipient.value;
+                            if (state.studentDataCache[groupName] && state.studentDataCache[groupName].usuarios) {
+                                state.studentDataCache[groupName].usuarios.forEach(u => targetStudentNames.add(u.nombre));
                             }
-                        });
-                    } else if (type === 'group') {
-                        const groupName = targetGroup.value;
-                        if (state.studentDataCache[groupName] && state.studentDataCache[groupName].usuarios) {
-                            targetStudents = state.studentDataCache[groupName].usuarios.map(u => u.nombre);
+                        } else if (recipient.type === 'user') {
+                            targetStudentNames.add(recipient.value);
                         }
-                    } else if (type === 'user') {
-                        targetStudents.push(targetUser.value);
                     }
 
-                    if (targetStudents.length === 0) {
-                        throw new Error("No se encontraron destinatarios.");
+                    if (targetStudentNames.size === 0) {
+                        throw new Error("No se encontraron destinatarios válidos.");
                     }
                     
-                    const uniqueTargets = [...new Set(targetStudents)];
+                    const uniqueTargets = Array.from(targetStudentNames);
 
                     const promises = uniqueTargets.map(studentName => {
                         const messageColRef = collection(db, "userMessages", studentName, "messages");
@@ -544,6 +837,7 @@
                     DOMElements.messageModal.overlay.classList.remove('active');
                     editor.innerHTML = "";
                     title.value = "";
+                    state.messageRecipients = []; // Limpiar
 
                 } catch (e) {
                     console.error("Error enviando mensaje:", e);
@@ -553,49 +847,159 @@
                 }
             }
 
+            // ===== FUNCIONES DE BANDEJA DE ENTRADA (ESTUDIANTE) =====
+            
+            // ACTUALIZADO: `setupUserMessagesListener` ahora actualiza la insignia del inbox
             function setupUserMessagesListener(studentName) {
                 if (state.messageListenerUnsubscribe) {
                     state.messageListenerUnsubscribe();
                 }
 
                 const messagesQuery = query(
-                    collection(db, "userMessages", studentName, "messages"),
-                    where("read", "==", false)
+                    collection(db, "userMessages", studentName, "messages")
+                    // Ya no filtra por "read == false", los trae todos
                 );
 
                 state.messageListenerUnsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-                    if (snapshot.empty || state.currentMessageId) {
-                        return; 
+                    state.userMessages = snapshot.docs
+                        .map(doc => ({ id: doc.id, ...doc.data() }))
+                        .sort((a, b) => b.timestamp - a.timestamp); // Ordenar por más reciente
+                    
+                    const unreadCount = state.userMessages.filter(m => !m.read).length;
+                    
+                    // Actualizar insignia
+                    if (DOMElements.header.inboxBadge) {
+                        if (unreadCount > 0) {
+                            DOMElements.header.inboxBadge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                            DOMElements.header.inboxBadge.classList.remove('hidden');
+                        } else {
+                            DOMElements.header.inboxBadge.classList.add('hidden');
+                        }
+                        DOMElements.header.inboxBtn.classList.remove('hidden'); // Mostrar botón de inbox
                     }
 
-                    const firstUnreadDoc = snapshot.docs[0];
-                    const message = firstUnreadDoc.data();
+                    // Si el modal de inbox está abierto, re-renderizar la lista
+                    if (DOMElements.inboxModal.overlay.classList.contains('active')) {
+                        renderInboxList();
+                        // Si el mensaje seleccionado se actualiza (ej. se elimina remotamente), limpiar vista
+                        if (state.selectedMessageId && !state.userMessages.find(m => m.id === state.selectedMessageId)) {
+                            clearInboxView();
+                        }
+                    }
                     
-                    state.currentMessageId = firstUnreadDoc.id; 
-
-                    DOMElements.broadcastModal.title.textContent = message.title || "Aviso del Administrador";
-                    DOMElements.broadcastModal.content.innerHTML = message.htmlContent; 
-                    DOMElements.broadcastModal.overlay.classList.add('active');
+                    // Ya NO muestra el pop-up (broadcastModal)
 
                 }, (error) => {
                     console.error("Error en listener de mensajes:", error);
+                    DOMElements.header.inboxBtn.classList.add('hidden'); // Ocultar si hay error
                     if (error.code === 'permission-denied') {
                         console.warn("Permiso denegado para leer mensajes. Asegúrate de que las reglas de Firestore estén correctas para 'userMessages'.");
                     }
                 });
             }
-
+            
+            // ACTUALIZADO: `handleMarkMessageAsRead` se llama al hacer clic en un mensaje
             async function handleMarkMessageAsRead(messageId) {
                 if (!messageId || !state.currentUser || state.currentUser.type !== 'student') return;
 
+                const message = state.userMessages.find(m => m.id === messageId);
+                // Solo marcar si no está leído
+                if (message && !message.read) {
+                    const studentName = state.currentUser.data.nombre;
+                    const messageRef = doc(db, "userMessages", studentName, "messages", messageId);
+                    try {
+                        await updateDoc(messageRef, { read: true });
+                        // El listener onSnapshot se encargará de actualizar el estado y la UI
+                    } catch (e) {
+                        console.error("Error al marcar mensaje como leído:", e);
+                    }
+                }
+            }
+            
+            // NUEVO: Funciones para gestionar el Modal de Inbox
+            function openInboxModal() {
+                renderInboxList();
+                clearInboxView();
+                toggleModal('inboxModal', true);
+            }
+
+            function renderInboxList() {
+                const { list } = DOMElements.inboxModal;
+                if (state.userMessages.length === 0) {
+                    list.innerHTML = `<p class="p-4 text-center text-gray-500">No tienes mensajes.</p>`;
+                    return;
+                }
+
+                list.innerHTML = state.userMessages.map(msg => {
+                    const d = new Date(msg.timestamp);
+                    const dateString = d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
+                    return `
+                        <div class="message-item ${msg.read ? '' : 'unread'} ${msg.id === state.selectedMessageId ? 'selected' : ''}" data-message-id="${msg.id}">
+                            <div class="flex justify-between text-sm">
+                                <p class="truncate">${msg.title || 'Sin Asunto'}</p>
+                                <p class="flex-shrink-0 ml-2">${dateString}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            function showInboxMessage(messageId) {
+                const { placeholder, contentArea, title, timestamp, body, deleteFooter } = DOMElements.inboxModal;
+                const message = state.userMessages.find(m => m.id === messageId);
+
+                if (!message) {
+                    clearInboxView();
+                    return;
+                }
+
+                state.selectedMessageId = messageId;
+                
+                placeholder.classList.add('hidden');
+                contentArea.classList.remove('hidden');
+                deleteFooter.classList.remove('hidden');
+
+                title.textContent = message.title || 'Sin Asunto';
+                timestamp.textContent = `Enviado: ${new Date(message.timestamp).toLocaleString()}`;
+                body.innerHTML = message.htmlContent;
+                
+                // Marcar como leído
+                handleMarkMessageAsRead(messageId);
+                
+                // Actualizar la lista para reflejar la selección
+                renderInboxList();
+            }
+
+            function clearInboxView() {
+                const { placeholder, contentArea, title, timestamp, body, deleteFooter } = DOMElements.inboxModal;
+                state.selectedMessageId = null;
+                placeholder.classList.remove('hidden');
+                contentArea.classList.add('hidden');
+                deleteFooter.classList.add('hidden');
+                title.textContent = '';
+                timestamp.textContent = '';
+                body.innerHTML = '';
+            }
+
+            async function handleDeleteMessage() {
+                if (!state.selectedMessageId || !state.currentUser || state.currentUser.type !== 'student') return;
+
+                const messageId = state.selectedMessageId;
                 const studentName = state.currentUser.data.nombre;
                 const messageRef = doc(db, "userMessages", studentName, "messages", messageId);
+                
+                DOMElements.inboxModal.deleteBtn.disabled = true;
 
                 try {
-                    await updateDoc(messageRef, { read: true });
-                    state.currentMessageId = null; 
+                    await deleteDoc(messageRef);
+                    showToast("Mensaje eliminado.", "success");
+                    clearInboxView();
+                    // onSnapshot actualizará la lista
                 } catch (e) {
-                    console.error("Error al marcar mensaje como leído:", e);
+                    console.error("Error al eliminar mensaje:", e);
+                    showToast("Error al eliminar el mensaje.", "error");
+                } finally {
+                    DOMElements.inboxModal.deleteBtn.disabled = false;
                 }
             }
             // ===============================================
@@ -702,6 +1106,7 @@
                 } else {
                     if (teacherPassword.value === TEACHER_PASSWORD) {
                         state.currentUser = { type: 'teacher', data: { nombre: 'Admin' } };
+                        DOMElements.header.inboxBtn.classList.add('hidden'); // Ocultar inbox para admin
                         renderDashboard();
                         switchView('teacherDashboard');
                     } else {
@@ -718,6 +1123,10 @@
                     state.messageListenerUnsubscribe = null;
                 }
                 state.currentUser = null;
+                state.userMessages = []; // Limpiar mensajes
+                state.selectedMessageId = null;
+                DOMElements.header.inboxBtn.classList.add('hidden'); // Ocultar botón de inbox
+                DOMElements.header.inboxBadge.classList.add('hidden'); // Ocultar insignia
                 DOMElements.loginForm.teacherPassword.value = '';
                 switchView('roleSelectionView');
             }
@@ -1053,36 +1462,21 @@
                 
                 DOMElements.participantsModal.overlay.classList.add('active');
             }
-
+            
+            // ACTUALIZADO: `showMessagingModal` ahora configura el multi-select
             function showMessagingModal() {
-                const { targetGroup, targetUser } = DOMElements.messageModal;
-                
+                // La lógica antigua de poblar <select> se elimina
                 if (!state.studentDataCache) {
                     showToast("Datos de estudiantes no cargados. Intenta de nuevo.", "error");
                     return;
                 }
                 
-                // Poblar grupos
-                targetGroup.innerHTML = '';
-                Object.keys(state.studentDataCache).forEach(courseName => {
-                    targetGroup.innerHTML += `<option value="${courseName}">${courseName}</option>`;
-                });
+                // Configurar el nuevo componente multi-select
+                setupMessageMultiSelect();
 
-                // Poblar usuarios
-                targetUser.innerHTML = '';
-                let allStudents = [];
-                Object.values(state.studentDataCache).forEach(course => {
-                    if(course.usuarios) {
-                        allStudents.push(...course.usuarios);
-                    }
-                });
-                allStudents.sort((a, b) => a.nombre.localeCompare(b.nombre));
-                allStudents.forEach(student => {
-                    targetUser.innerHTML += `<option value="${student.nombre}">${student.nombre} (${student.course})</option>`;
-                });
-                
-                document.getElementById('message-target-group-container').classList.add('hidden');
-                document.getElementById('message-target-user-container').classList.add('hidden');
+                // Limpiar campos
+                DOMElements.messageModal.title.value = '';
+                DOMElements.messageModal.editor.innerHTML = '';
                 
                 toggleModal('messageModal', true);
             }
@@ -1265,7 +1659,6 @@
                         </button>`;
                 }
 
-                // CAMBIO: Estructura con Grid y elementos compactados
                 return `<div class="room-row" id="room-${room.id}">
                             <div class="room-info" data-roomid="${room.id}">
                                 <p class="font-bold text-lg">${room.name}</p>
@@ -1512,7 +1905,7 @@
                 
                 if (DOMElements.broadcastModal.closeBtn) DOMElements.broadcastModal.closeBtn.addEventListener('click', () => {
                     DOMElements.broadcastModal.overlay.classList.remove('active');
-                    handleMarkMessageAsRead(state.currentMessageId);
+                    // La lógica de marcar como leído ahora está en la bandeja de entrada
                 });
                 
                 if (DOMElements.participantsModal.closeBtn) DOMElements.participantsModal.closeBtn.addEventListener('click', () => toggleModal('participantsModal', false));
@@ -1524,14 +1917,39 @@
                 if (DOMElements.messageModal.closeBtn) DOMElements.messageModal.closeBtn.addEventListener('click', () => toggleModal('messageModal', false));
                 if (DOMElements.messageModal.overlay) DOMElements.messageModal.overlay.addEventListener('click', e => e.target === DOMElements.messageModal.overlay && toggleModal('messageModal', false));
                 
-                // --- Listeners del Modal de Mensajería (Admin) ---
-                if (DOMElements.messageModal.targetType) {
-                    DOMElements.messageModal.targetType.addEventListener('change', () => {
-                        const type = DOMElements.messageModal.targetType.value;
-                        document.getElementById('message-target-group-container').classList.toggle('hidden', type !== 'group');
-                        document.getElementById('message-target-user-container').classList.toggle('hidden', type !== 'user');
+                // --- Listeners del Modal de Inbox (Estudiante) ---
+                if (DOMElements.header.inboxBtn) {
+                    DOMElements.header.inboxBtn.addEventListener('click', openInboxModal);
+                }
+                if (DOMElements.inboxModal.closeBtn) DOMElements.inboxModal.closeBtn.addEventListener('click', () => toggleModal('inboxModal', false));
+                if (DOMElements.inboxModal.overlay) DOMElements.inboxModal.overlay.addEventListener('click', e => e.target === DOMElements.inboxModal.overlay && toggleModal('inboxModal', false));
+                
+                if (DOMElements.inboxModal.list) {
+                    DOMElements.inboxModal.list.addEventListener('click', e => {
+                        const item = e.target.closest('.message-item');
+                        if (item && item.dataset.messageId) {
+                            showInboxMessage(item.dataset.messageId);
+                        }
                     });
-                } else { console.error("Error: message-target-type no encontrado."); }
+                }
+                
+                if (DOMElements.inboxModal.deleteBtn) {
+                    DOMElements.inboxModal.deleteBtn.addEventListener('click', handleDeleteMessage);
+                }
+
+                // --- Listeners del Modal de Mensajería (Admin) ---
+                
+                // Listener para el input de multi-select (se añade en setupMessageMultiSelect)
+                
+                // Listener global para cerrar sugerencias
+                document.addEventListener('click', (e) => {
+                    if (DOMElements.messageModal.overlay.classList.contains('active')) {
+                        const { recipientContainer, suggestionsContainer } = DOMElements.messageModal;
+                        if (!recipientContainer.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                            suggestionsContainer.classList.add('hidden');
+                        }
+                    }
+                });
 
                 if (DOMElements.messageModal.toolbar) {
                     DOMElements.messageModal.toolbar.addEventListener('click', e => {
